@@ -1,0 +1,15 @@
+﻿放一个 Julia 各平台客户端的 **百度云分流** ，[Julia lang Release @百度云 ](https://pan.baidu.com/s/1COOZ3lGvqwAvRL4LAJutIw)
+在  `Julia lang > Release`  下面，更老的客户端在  `Julia lang > Release > Old release`  里
+
+目前有：1.0.0 (最新)，0.7 beta2，0.6.4 以及之前所有的老版本，[浙大镜像 ](https://mirrors.zju.edu.cn/julia/releases/) Release 中的都有。
+
+看文件名就能知道对应的平台
+
+使用浙大镜像 [PkgMirrors.jl v1.0.0 - 在 Julia 中使用镜像站 - Julia的使用姿势 / 工程发布 - Julia中文社区](http://discourse.juliacn.com/t/topic/736)
+
+顺带把 github 上的源码也扒了，放在  `Julia lang > Source@github`  里
+有 release 的 repo 下了最近的几个 release，
+Julia 主 repo 用 git clone 下来的文件夹打包了，放在  `Julia lang > Source@github > julia`  下
+
+* `[2018-08-13]julia-master@full-git-repo.7z`  是  `git clone`  得到的文件夹直接 7z 打包，解压后 470M +
+* `[2018-08-13]julia-master.bundle.7z`  是  `git bundle create julia-master.bundle HEAD master`  得到的文件 7z 打包的，解压后 140 M +

@@ -1,0 +1,90 @@
+        - using BenchmarkTools
+        - import Base: (+), (==)
+        - 
+        - abstract type ListNode end
+        - mutable struct Node <: ListNode
+ 19788192     val::UInt8 #再小就要手动处理 bit 流
+        -     next::ListNode
+        - end
+        - 
+        - # List Node Null
+        2 struct Null <: ListNode end
+        - # const null = LnNull()
+        - null = Null()
+        - ==(::Null, ::Null) = true
+        - ==(::Null, ::Node) = false
+        - ==(::Node, ::Null) = false
+        - # 可变数据结构不能使用 == 直接比较
+        - function ==(ln1::Node, ln2::Node)
+       74     ln1.val  != ln2.val  && return false
+       37     ln1.next != ln2.next && return false
+       37     true
+        - end
+        - 
+        - # 节点相加，带进位，忽略 next
+        - function addNodesVal(ln1::Node, ln2::Node, carry=false)
+ 19520638     carry_num = carry ? 1 : 0
+  9894022     val_sum = ln1.val + ln2.val + carry_num
+  9894022     @assert 0<= val_sum <= 19 # 9 + 9 + 1
+        -     
+  9894022     new_val = val_sum % 10 # 只保留 1 位数
+  9894022     carry   = val_sum > 9  # 是否有进位
+        - 
+  9894022     new_val, carry
+        - end
+        0 addNodesVal(ln::Node, ::Null, c::Bool) = addNodesVal(ln, Node(UInt8(c)))
+        0 addNodesVal(::Null, ln::Node, c::Bool) = addNodesVal(ln, Node(UInt8(c)))
+        0 addNodesVal(::Null,   ::Null, c::Bool) = (UInt8(c), false)
+        - 
+        - function addTwoNumbers(ln1::ListNode, ln2::ListNode)
+   534812     val, carry = addNodesVal(ln1, ln2)
+   267406     ln3 = Node(val, null)
+        -     next_node = ln3
+        -     
+ 14439924     while carry || ln1.next!=null || ln2.next!=null
+  9626616         _val, carry = addNodesVal(ln1.next, ln2.next, carry)
+  9626616         next_node.next = Node(_val, null)
+        -         
+        -         # 下一圈初始化
+ 19253232         ln1.next!=null && (ln1 = ln1.next)
+ 19253232         ln2.next!=null && (ln2 = ln2.next)
+  9626616         next_node = next_node.next
+        -     end
+        -     
+   267406     ln3
+        - end
+        - Base.:+(ln1::ListNode, ln2::ListNode) = addTwoNumbers(ln1, ln2)
+        - 
+        - #= 辅助函数 
+        - =#
+        - "数字转数组"
+        - function num2arr(n::Integer)
+        -     ## 1- digits 法
+        -     # digits 输出为倒序
+        -     #   digits(123) == [3, 2, 1]
+        2     n |> digits |> reverse
+        - end
+        - function num2ln(n::Integer)
+        4     arr = num2arr(n)
+        2     ln = null
+        2     for i in arr
+       76         ln = Node(UInt8(i), ln)
+        -     end
+        2     ln
+        - end
+        4 Node(n::Integer) = num2ln(n)
+        - Node() = null
+        - 
+        - # test 
+        - big_num = big"1122334455667788990998877665544332211"
+        - result_big_num = big_num*2
+        - big_node = Node(big_num)
+        - result_node = Node(result_big_num)
+        - 
+        - # @btime $big_num + $big_num
+        - println("BigInt result: \n\t$(result_big_num)")
+        - f_result = addTwoNumbers(big_node, big_node)
+        - println("addTwoNumbers result: $(result_node==f_result)")
+        - 
+        - @btime addTwoNumbers($big_node, $big_node)
+        - 
