@@ -1,0 +1,16 @@
+      DIMENSION N(500)
+      WRITE (6,6)
+ 6    FORMAT (1H1,26HNUMBERS IN ALGEBRAIC ORDER)
+      DO 8 I=1,500
+ 8    READ (5,7) N(I)
+ 7    FORMAT (I4)
+      DO 10 K=1,1999
+      J=K-1000
+      DO 10 I-1,500
+      IF(N(I)-J)10,9,10
+10    CONTINUE
+      STOP
+ 9    WRITE (6,95) N(I)
+95    FORMAT (1H ,I4)
+      GO TO 10
+      END

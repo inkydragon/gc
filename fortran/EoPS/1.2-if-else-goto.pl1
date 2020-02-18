@@ -1,0 +1,10 @@
+ /* bad style */
+            IF CTR > 45 THEN GO TO OVFLO;
+          ELSE GO TO RDCARD;
+ OVFLO:
+       ...
+ 
+ /* good style */
+       IF CTR <= 45 THEN GOTO RDCARD;
+ OVFLO:
+       ...
