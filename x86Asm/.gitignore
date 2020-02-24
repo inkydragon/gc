@@ -1,6 +1,10 @@
-# 
+# VS
 *.obj
 *.pdb
 *.ilk
 *.exe
 mllink$.lnk
+
+# gcc
+*.o
+*.s
