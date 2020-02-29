@@ -1,0 +1,1 @@
+print("sum = {}".format(sum(range(11, 1+int(input())))))
