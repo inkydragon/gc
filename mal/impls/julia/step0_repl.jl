@@ -20,6 +20,7 @@ function rep(str)
 end
 
 function main_loop()
+    # Mal_REPL.start_repl(rep)
     PROMPT = "user> "
 
     print(PROMPT)
@@ -30,7 +31,7 @@ function main_loop()
         print(PROMPT)
     end # while true loop end
 end
-
+# main_loop()
 if Mal_REPL.IN_JULIA_REPL
     Mal_REPL.start_repl(rep)
 else
