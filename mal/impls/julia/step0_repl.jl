@@ -1,5 +1,8 @@
 # Step 0: REPL skeleton
 
+include("Mal_REPL.jl")
+using .Mal_REPL
+
 function READ(str)
     str
 end
@@ -28,4 +31,8 @@ function main_loop()
     end # while true loop end
 end
 
-main_loop()
+if Mal_REPL.IN_JULIA_REPL
+    Mal_REPL.start_repl(rep)
+else
+    main_loop()
+end
