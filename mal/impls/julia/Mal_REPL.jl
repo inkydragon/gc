@@ -9,7 +9,8 @@ const NOT_IN_JULIA_REPL = ! IN_JULIA_REPL
 const MAL_PROMPT = "user> " # 自定义的 prompt
 
 # 全局变量，用于处理输入
-BasicREPL_INPUT_LINE_FUNC = identity
+const global BasicREPL_INPUT_LINE_FUNC = Vector{Function}()
+push!(BasicREPL_INPUT_LINE_FUNC, identity)
 
 export start_repl, IN_JULIA_REPL
 
@@ -34,7 +35,7 @@ end
 
 # stdlib/REPL.jl#L215
 # 修改：用于支持 BasicREPL 的自定义
-#   1. IN_JULIA_REPL
+#   1. MAL_PROMPT
 #   2. BasicREPL_INPUT_LINE_FUNC
 #   3. 注释掉 write(repl.terminal, '\n') 消除换行
 function REPL.run_frontend(repl::REPL.BasicREPL, backend::REPL.REPLBackendRef)
@@ -68,14 +69,14 @@ function REPL.run_frontend(repl::REPL.BasicREPL, backend::REPL.REPLBackendRef)
                 end
             end
             # ast = Base.parse_input_line(line)
-  #=2=#     ast = Base.invokelatest(BasicREPL_INPUT_LINE_FUNC, line)
+  #=2=#     ast = Base.invokelatest(BasicREPL_INPUT_LINE_FUNC[], line)
             (isa(ast,Expr) && ast.head === :incomplete) || break
         end
         if !isempty(line)
             response = REPL.eval_with_backend(ast, backend)
             REPL.print_response(repl, response, !REPL.ends_with_semicolon(line), false)
         end
-  #=3=# # write(repl.terminal, '\n')
+        write(repl.terminal, '\n')
         ((!interrupted && isempty(line)) || hit_eof) && break
     end
     # terminate backend
@@ -116,7 +117,7 @@ function start_repl(repl_func::Function=identity)
     have_color = REPL.Terminals.hascolor(term)
     if term.term_type == "dumb"
         # overwrite REPL.run_frontend(repl::BasicREPL)
-        BasicREPL_INPUT_LINE_FUNC = repl_func
+        Mal_REPL.BasicREPL_INPUT_LINE_FUNC[] = repl_func
         active_repl = REPL.BasicREPL(term)
     else
         active_repl = REPL.LineEditREPL(term, have_color, true)
@@ -128,7 +129,6 @@ function start_repl(repl_func::Function=identity)
         main_mode.prompt = MAL_PROMPT
         main_mode.on_done = REPL.respond(repl_func, active_repl, main_mode)
     end
-    # active_repl = REPL.BasicREPL(term)
     pushdisplay(REPL.REPLDisplay(active_repl))
 
     REPL.run_repl(active_repl)

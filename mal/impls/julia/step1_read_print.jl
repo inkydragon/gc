@@ -1,10 +1,12 @@
-# Step 0: REPL skeleton
-
+# Step 1: REPL skeleton
 include("Mal_REPL.jl")
+include("types.jl")
+include("printer.jl")
+include("reader.jl")
 using .Mal_REPL
 
 function READ(str)
-    str
+    read_str(str)
 end
 
 function EVAL(ast, env)
@@ -12,23 +14,31 @@ function EVAL(ast, env)
 end
 
 function PRINT(exp)
-    exp
+    "$(exp)"
 end
 
 function rep(str)
-    str |> READ |> s->EVAL(s,"") |> PRINT
+    try
+        str |> READ |> s->EVAL(s,"") |> PRINT
+    catch err
+        for (exc, bt) in Base.catch_stack()
+            showerror(stdout, exc, bt)
+            println()
+        end
+        "[error] $err"
+    end
 end
 
-function main_loop()
-    PROMPT = "user> "
+# function main_loop()
+#     PROMPT = "user> "
 
-    print(PROMPT)
-    for line in eachline(stdin)
-        ('\x04' in line) && break # ^D
+#     print(PROMPT)
+#     for line in eachline(stdin)
+#         ('\x04' in line) && break # ^D
 
-        line |> rep |> println
-        print(PROMPT)
-    end # while true loop end
-end
+#         line |> rep |> println
+#         print(PROMPT)
+#     end # while true loop end
+# end
 
-Mal_REPL.start_repl(rep)
+start_repl(rep)
