@@ -87,6 +87,7 @@ end
 
 struct MalVec <: MalType
     val :: Vector{MalType}
+    MalVec() = new(Vector{MalVec}())
 end
 struct MalHash <: MalType
     val :: Dict

@@ -92,6 +92,9 @@ function read_form(reader::Reader)
     if startswith(peek(reader), "(")
         eat(reader, "(")
         read_list(reader)
+    elseif startswith(peek(reader), "[")
+        eat(reader, "[")
+        read_vector(reader)
     else
         read_atom(reader)
     end
@@ -99,12 +102,30 @@ end
 
 function read_list(reader::Reader)
     list = MalList()
-    while !endswith(peek(reader), ")") # ")" != tk
+    while !isnothing(peek(reader))
+        endswith(peek(reader), ")") && break
         push!(list.val, read_form(reader))
     end
+    # 在读到 ")" 之前遇到 EOF
+    isnothing(peek(reader)) && throw("[lex] unbalanced pair '('.")
     eat(reader, ")")
+
     @dbg println("[list] ret $list")
     list
+end
+
+function read_vector(reader::Reader)
+    vec = MalVec()
+    while !isnothing(peek(reader))
+        endswith(peek(reader), "]") && break
+        push!(vec.val, read_form(reader))
+    end
+    # 在读到 "]" 之前遇到 EOF
+    isnothing(peek(reader)) && throw("[lex] unbalanced pair '['.")
+    eat(reader, "]")
+
+    @dbg println("[vec] ret $vec")
+    vec
 end
 
 #= `read_atom` help function =#
