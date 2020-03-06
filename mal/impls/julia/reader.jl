@@ -1,5 +1,5 @@
 include("types.jl")
-debug[] = true
+# debug[] = true
 const REGEX_TABLE = Dict(
     # 初步分割
     :whitespaces_commas  => raw"[\s,]*",
@@ -121,7 +121,7 @@ function read_atom(reader::Reader)
         return MalFloat(parse(Float64, tk))
     elseif occursin(ONLY(REGEX_TABLE[:string]), tk)
         m = match(ONLY(REGEX_TABLE[:string]), tk)
-        return m[:1] |> unescape_string |> MalStr
+        return m[:1] |> MalStr
     elseif occursin(ONLY(REGEX_TABLE[:identifier]), tk)
         return tk |> Symbol |> MalSym
     else

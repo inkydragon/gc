@@ -14,7 +14,7 @@ function EVAL(ast, env)
 end
 
 function PRINT(exp)
-    "$(exp)"
+    pr_str(exp)
 end
 
 function rep(str)

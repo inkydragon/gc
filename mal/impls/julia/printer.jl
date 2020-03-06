@@ -38,3 +38,6 @@ end
 
 Base.show(io::IO, m::MalMetadata) =
     print(io, "(with-meta $(m.val) $(m.meta))")
+
+pr_str(m::MalType, print_readably=true) =
+    print_readably ? "$m" : unescape_string("$m")
