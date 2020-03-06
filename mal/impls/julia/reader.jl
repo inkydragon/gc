@@ -13,7 +13,7 @@ const REGEX_TABLE = Dict(
     # lex 验证用
     :float       => raw"[+-]?([0-9]+\.[0-9]*|[0-9]*\.[0.9]+)",
     :integer     => raw"[+-]?[0-9]+",
-    :string      => raw"\"((?:\\.|[^\\\"])*)\"?",
+    :string      => raw"\"((?:\\.|[^\\\"])*)\"",
 )
 const ONLY = s -> Regex(raw"^" * s * raw"$")
 
@@ -46,7 +46,7 @@ end
 
 function eat(r::Reader, tk::AbstractString)
     head = next(r)
-    head==tk || throw("[match] need ($tk) but got ($head)")
+    head==tk || throw("[eat] need ($tk) but got ($head)")
 end
 
 function read_str(program::AbstractString)
@@ -107,9 +107,33 @@ function read_list(reader::Reader)
     list
 end
 
-function match_id(reader::Reader)
-    @assert occursin(ONLY(REGEX_TABLE[:string]), reader.peek())
+#= `read_atom` help function =#
+function match_id(tk::AbstractString)
+    @assert occursin(ONLY(REGEX_TABLE[:identifier]), tk)
     
+    if "nil" == tk
+        return MalNil()
+    elseif "true" == tk || "false" == tk
+        return parse(Bool, "true") |> MalBool
+    else
+        return tk |> Symbol |> MalSym
+    end
+end
+
+function match_str(tk::AbstractString)
+    @assert occursin(ONLY(REGEX_TABLE[:double_quote_string]), tk)
+
+    m_err = match(r"(\\+)\"$", tk)
+    m = match(ONLY(REGEX_TABLE[:string]), tk)
+    if isnothing(m) # 引号未闭合
+        @dbg "($tk)"
+        throw("[lex] unbalanced quote!")
+    elseif !isnothing(m_err) && length(m_err[:1]) % 2 == 1
+        # 末尾有奇数个 \, 转移了最后的引号
+        throw("[lex] unbalanced escape! Can't esc last quote.")
+    else
+        m[:1] |> MalStr
+    end
 end
 
 function read_atom(reader::Reader)
@@ -119,11 +143,10 @@ function read_atom(reader::Reader)
         return MalInt(parse(Int64, tk))
     elseif occursin(ONLY(REGEX_TABLE[:float]), tk)
         return MalFloat(parse(Float64, tk))
-    elseif occursin(ONLY(REGEX_TABLE[:string]), tk)
-        m = match(ONLY(REGEX_TABLE[:string]), tk)
-        return m[:1] |> MalStr
+    elseif occursin(ONLY(REGEX_TABLE[:double_quote_string]), tk)
+        return match_str(tk)
     elseif occursin(ONLY(REGEX_TABLE[:identifier]), tk)
-        return tk |> Symbol |> MalSym
+        return match_id(tk)
     else
         @error "[read_atom] unknown token ($tk)"
         exit(-1)

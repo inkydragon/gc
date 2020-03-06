@@ -21,7 +21,7 @@ function rep(str)
     try
         str |> READ |> s->EVAL(s,"") |> PRINT
     catch err
-        for (exc, bt) in Base.catch_stack()
+        @dbg for (exc, bt) in Base.catch_stack()
             showerror(stdout, exc, bt)
             println()
         end
