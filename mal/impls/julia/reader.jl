@@ -47,6 +47,7 @@ end
 function eat(r::Reader, tk::AbstractString)
     head = next(r)
     head==tk || throw("[eat] need ($tk) but got ($head)")
+    head
 end
 
 function read_str(program::AbstractString)
@@ -56,6 +57,9 @@ end
 
 "lex 将字符串分割为 tokens"
 function tokenize(program::AbstractString)
+    program = strip(program, ['\n', '\r'])
+    isempty(program) && return AbstractString[""]
+
     # 正则表达式
     all_token = Regex(
         REGEX_TABLE[:whitespaces_commas] * 
@@ -83,22 +87,67 @@ function tokenize(program::AbstractString)
         offset += length(m.match)
         m = match(all_token, program[offset:end])
     end
+    # filter!(x->x!="", tokens)
     @dbg println(tokens)
     tokens
 end
 
 function read_form(reader::Reader)
     @dbg println("[header] $(peek(reader))")
+
+    # rec data
     if startswith(peek(reader), "(")
         eat(reader, "(")
         read_list(reader)
     elseif startswith(peek(reader), "[")
         eat(reader, "[")
         read_vector(reader)
+    elseif startswith(peek(reader), "{")
+        eat(reader, "{")
+        read_hash(reader)
+
+    elseif startswith(peek(reader), "@")
+        eat(reader, "@")
+        read_deref(reader)
+    elseif startswith(peek(reader), "^")
+        eat(reader, "^")
+        read_meta(reader)
+    
+    # eat start seq in functions
+    elseif startswith(peek(reader), "'")
+        read_quote(reader)
+    elseif startswith(peek(reader), "`")
+        read_quasiquote(reader)
+    elseif startswith(peek(reader), "~@")
+        read_splice_unquote(reader)
+    elseif startswith(peek(reader), "~")
+        read_unquote(reader)
+
+    # default
     else
         read_atom(reader)
     end
 end
+
+# 事不过三
+# function read_rec_ds(
+#         reader::Reader, 
+#         ::T, 
+#         LP::String, 
+#         RP::String
+#     ) where T <: MalRec
+#     ds = MalList()
+#     while !isnothing(peek(reader))
+#         endswith(peek(reader), "$LP") && break
+#         push!(ds.val, read_form(reader))
+#     end
+#     # 在读到 LP 之前遇到 EOF
+#     isnothing(peek(reader)) && throw("[lex] unbalanced pair '$LP'.")
+#     eat(reader, "$RP")
+
+#     @dbg println("[$T] ret $ds")
+#     ds
+# end
 
 function read_list(reader::Reader)
     list = MalList()
@@ -128,16 +177,71 @@ function read_vector(reader::Reader)
     vec
 end
 
+function read_hash(reader::Reader)
+    hash = MalHash()
+    while !isnothing(peek(reader))
+        endswith(peek(reader), "}") && break
+        key = read_atom(reader)
+        val = read_form(reader)
+        isnothing(val) && throw("[lex] unbalanced {k=>v} pair 'k=>?'.")
+        push!(hash.val, key => val)
+    end
+    # 在读到 "}" 之前遇到 EOF
+    isnothing(peek(reader)) && throw("[lex] unbalanced pair '{'.")
+    eat(reader, "}")
+
+    @dbg println("[hash] ret $hash")
+    hash
+end
+
+function read_deref(reader::Reader)
+    id = read_atom(reader)
+    isnothing(id) && throw("[lex] unexpected EOF? 'deref ?'.")
+    @dbg println("[deref] ret (deref $id)")
+    MalDeref(id)
+end
+
+function read_meta(reader::Reader)
+    tk = peek(reader)
+    isnothing(tk) && throw("[lex] unexpected EOF? '^?'.")
+    "{"==tk || throw("[lex] unexpected EOF? '^$tk'.")
+
+    eat(reader, "{")
+    hash = read_hash(reader)
+    isnothing(hash) && throw("[lex] unexpected EOF? '^?'.")
+    m = read_form(reader)
+    isnothing(m)    && throw("[lex] unexpected EOF? '^{} ?'.")
+    MalMetadata(m, hash)
+end
+
+function read_quotes(reader::Reader, ::Type{T}, start::String) where T<:MalType
+    head = eat(reader, start)
+    m = read_form(reader)
+    isnothing(m) && throw("[lex] unexpected EOF? '$head?'.")
+    T(m)
+end
+read_quote(r::Reader) = read_quotes(r, MalQuote, "'")
+read_quasiquote(r::Reader) = read_quotes(r, MalQuasiQuote, "`")
+read_splice_unquote(r::Reader) = read_quotes(r, MalSpliceUnquote, "~@")
+read_unquote(r::Reader) = read_quotes(r, MalUnquote, "~")
+
+
 #= `read_atom` help function =#
 function match_id(tk::AbstractString)
     @assert occursin(ONLY(REGEX_TABLE[:identifier]), tk)
-    
+
     if "nil" == tk
-        return MalNil()
+        MalNil()
     elseif "true" == tk || "false" == tk
-        return parse(Bool, "true") |> MalBool
+        parse(Bool, tk) |> MalBool
+    elseif startswith(tk, ":")
+        id_re = REGEX_TABLE[:identifier][1:end-1] # remove '*'
+        kw_re = ":($id_re+)"
+        m = match(ONLY(kw_re), tk)
+        isnothing(m) && throw("[lex] EOF? illegal keyword? '$tk'.")
+        m[:1] |> Symbol |> MalKeyword
     else
-        return tk |> Symbol |> MalSym
+        tk |> Symbol |> MalSym
     end
 end
 
@@ -159,15 +263,21 @@ end
 
 function read_atom(reader::Reader)
     tk = next(reader)
+    # @dbg println("read_atom: $tk")
 
-    if occursin(ONLY(REGEX_TABLE[:integer]), tk)
-        return MalInt(parse(Int64, tk))
+    if isnothing(tk)
+        tk
+    elseif occursin(ONLY(REGEX_TABLE[:integer]), tk)
+        MalInt(parse(Int64, tk))
     elseif occursin(ONLY(REGEX_TABLE[:float]), tk)
-        return MalFloat(parse(Float64, tk))
+        MalFloat(parse(Float64, tk))
     elseif occursin(ONLY(REGEX_TABLE[:double_quote_string]), tk)
-        return match_str(tk)
+        match_str(tk)
     elseif occursin(ONLY(REGEX_TABLE[:identifier]), tk)
-        return match_id(tk)
+        match_id(tk)
+    elseif occursin(ONLY(REGEX_TABLE[:comments]), tk)
+        @dbg println("ret MalComment")
+        MalComment(tk)
     else
         @error "[read_atom] unknown token ($tk)"
         exit(-1)

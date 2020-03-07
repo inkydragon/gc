@@ -3,7 +3,7 @@ const global debug = [false]
 macro dbg(expr)
     :( debug[] && $(esc(expr)) )
 end
-
+# debug[] = true
 #= Type def =#
 
 """
@@ -35,6 +35,7 @@ end
 """
 abstract type MalType end
 abstract type MalAtom <: MalType end
+abstract type MalRec  <: MalType end
 
 abstract type MalNum <: MalAtom end
 struct MalInt <: MalAtom
@@ -62,38 +63,42 @@ struct MalComment <: MalAtom
     val :: AbstractString
 end
 struct MalDeref <: MalAtom
-    val
+    val :: MalSym
 end
 
 
 
-struct MalList <: MalType
+struct MalList <: MalRec
     val :: Vector{MalType}
     MalList() = new(Vector{MalType}())
 end
 
 struct MalQuote <: MalType
-    val
+    val :: MalType
 end
 struct MalUnquote <: MalType
-    val
+    val:: MalType
 end
 struct MalQuasiQuote <: MalType
-    val
+    val:: MalType
 end
 struct MalSpliceUnquote <: MalType
-    val
+    val:: MalType
 end
 
-struct MalVec <: MalType
+struct MalVec <: MalRec
     val :: Vector{MalType}
     MalVec() = new(Vector{MalVec}())
 end
+
+const MAL_KEY_TYPE = Union{MalSym, MalStr, MalKeyword, MalInt, MalBool}
+const MAL_HASH_DICT_TYPE = Dict{MAL_KEY_TYPE, MalType}
 struct MalHash <: MalType
-    val :: Dict
+    val :: MAL_HASH_DICT_TYPE
+    MalHash() = new(MAL_HASH_DICT_TYPE())
 end
 
 struct MalMetadata <: MalType
-    meta :: MalHash
     val  :: MalType
+    meta :: MalHash
 end
