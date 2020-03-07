@@ -11,8 +11,8 @@ Base.show(io::IO, m::MalComment) = nothing
 Base.show(io::IO, m::MalKeyword) = print(io, repr(m.val))
 Base.show(io::IO, m::MalDeref) = print(io, "(deref $(m.val))")
 
-## Composite Types
 
+## Composite Types
 function rec_ds_show(
         io::IO, 
         m::MalRec,
@@ -39,7 +39,6 @@ Base.show(io::IO, m::MalQuasiQuote) =
     print(io, "(quasiquote $(m.val))")
 Base.show(io::IO, m::MalSpliceUnquote) =
     print(io, "(splice-unquote $(m.val))")
-
 
 Base.show(io::IO, m::MalMetadata) =
     print(io, "(with-meta $(m.val) $(m.meta))")

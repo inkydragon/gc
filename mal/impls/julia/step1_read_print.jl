@@ -18,8 +18,12 @@ function PRINT(exp)
 end
 
 function rep(str)
+    str |> READ |> s->EVAL(s,"") |> PRINT
+end
+
+function main_loop(str)
     try
-        str |> READ |> s->EVAL(s,"") |> PRINT
+        rep(str)
     catch err
         @dbg for (exc, bt) in Base.catch_stack()
             showerror(stdout, exc, bt)
@@ -29,16 +33,4 @@ function rep(str)
     end
 end
 
-# function main_loop()
-#     PROMPT = "user> "
-
-#     print(PROMPT)
-#     for line in eachline(stdin)
-#         ('\x04' in line) && break # ^D
-
-#         line |> rep |> println
-#         print(PROMPT)
-#     end # while true loop end
-# end
-
-start_repl(rep)
+start_repl(main_loop)

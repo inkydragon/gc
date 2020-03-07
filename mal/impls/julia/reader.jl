@@ -15,7 +15,9 @@ const REGEX_TABLE = Dict(
     :integer     => raw"[+-]?[0-9]+",
     :string      => raw"\"((?:\\.|[^\\\"])*)\"",
 )
-const ONLY = s -> Regex(raw"^" * s * raw"$")
+
+"确保整个字符串都符合给定的 re"
+const ONLY = re -> Regex(raw"^" * re * raw"$")
 
 mutable struct Reader
     "储存 token 的数组"
@@ -44,6 +46,7 @@ function peek(r::Reader)
     end
 end
 
+"取出一个 token，确保 token==tk。否则报错"
 function eat(r::Reader, tk::AbstractString)
     head = next(r)
     head==tk || throw("[eat] need ($tk) but got ($head)")
@@ -52,7 +55,6 @@ end
 
 function read_str(program::AbstractString)
     program |> tokenize |> Reader |> read_form
-
 end
 
 "lex 将字符串分割为 tokens"
@@ -92,6 +94,7 @@ function tokenize(program::AbstractString)
     tokens
 end
 
+"主 lexer。根据首字母进行分派"
 function read_form(reader::Reader)
     @dbg println("[header] $(peek(reader))")
 
@@ -227,46 +230,55 @@ read_unquote(r::Reader) = read_quotes(r, MalUnquote, "~")
 
 
 #= `read_atom` help function =#
+"lex 类标识符"
 function match_id(tk::AbstractString)
     @assert occursin(ONLY(REGEX_TABLE[:identifier]), tk)
 
     if "nil" == tk
+        # Nil
         MalNil()
     elseif "true" == tk || "false" == tk
+        # Bool
         parse(Bool, tk) |> MalBool
     elseif startswith(tk, ":")
+        # Keyword
         id_re = REGEX_TABLE[:identifier][1:end-1] # remove '*'
         kw_re = ":($id_re+)"
         m = match(ONLY(kw_re), tk)
         isnothing(m) && throw("[lex] EOF? illegal keyword? '$tk'.")
         m[:1] |> Symbol |> MalKeyword
     else
+        # Symbol / identifier
         tk |> Symbol |> MalSym
     end
 end
 
+"lex String 并检查转义合法性"
 function match_str(tk::AbstractString)
     @assert occursin(ONLY(REGEX_TABLE[:double_quote_string]), tk)
 
     m_err = match(r"(\\+)\"$", tk)
     m = match(ONLY(REGEX_TABLE[:string]), tk)
-    if isnothing(m) # 引号未闭合
+    if isnothing(m)
+        # 引号未闭合
         @dbg "($tk)"
         throw("[lex] unbalanced quote!")
     elseif !isnothing(m_err) && length(m_err[:1]) % 2 == 1
         # 末尾有奇数个 \, 转移了最后的引号
         throw("[lex] unbalanced escape! Can't esc last quote.")
     else
+        # String
         m[:1] |> MalStr
     end
 end
 
+"lex 原子类型"
 function read_atom(reader::Reader)
     tk = next(reader)
     # @dbg println("read_atom: $tk")
 
     if isnothing(tk)
-        tk
+        nothing
     elseif occursin(ONLY(REGEX_TABLE[:integer]), tk)
         MalInt(parse(Int64, tk))
     elseif occursin(ONLY(REGEX_TABLE[:float]), tk)
@@ -279,7 +291,6 @@ function read_atom(reader::Reader)
         @dbg println("ret MalComment")
         MalComment(tk)
     else
-        @error "[read_atom] unknown token ($tk)"
-        exit(-1)
+        throw("[read_atom] unknown token ($tk)")
     end
 end
