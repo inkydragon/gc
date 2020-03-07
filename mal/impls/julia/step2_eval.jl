@@ -13,27 +13,31 @@ end
 
 eval_ast(ast::MalType, _) = ast
 function eval_ast(ast::MalSym, env)
-    res = get(env, ast.val, nothing)
+    res = get(env, ast, nothing)
     isnothing(res) && throw("[eval] symbol '$ast' not found!")
     res
 end
 eval_ast(ast::T, env) where T <: Union{MalList, MalVec} =
-    T(MalType[EVAL(m, env) for m in ast.val])
+    T(MalType[EVAL(m, env) for m in ast])
 eval_ast(ast::MalHash, env) =
-    [k=>EVAL(v, env) for (k,v) in ast.val] |>
+    [k=>EVAL(v, env) for (k,v) in ast] |>
         MAL_HASH_DICT_TYPE |> 
         MalHash
 
+function apply(f::MalFunc, args)
+    f.val(args...)
+end
+
 EVAL(ast::MalType, env) = eval_ast(ast, env)
 function EVAL(ast::MalList, env)
-    isempty(ast.val) && return ast
+    isempty(ast) && return ast
 
     new_ast = eval_ast(ast, env)
     # 取出函数与参数
-    f = new_ast.val[1]
-    args = new_ast.val[2:end]
+    f = new_ast[1]
+    args = new_ast[2:end]
     # 函数调用
-    f.val([m.val for m in args]...) |> MalInt
+    apply(f, args)
 end
 
 function PRINT(exp)

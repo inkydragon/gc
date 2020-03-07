@@ -15,7 +15,7 @@ Base.show(io::IO, m::MalDeref) = print(io, "(deref $(m.val))")
 ## Composite Types
 function rec_ds_show(
         io::IO, 
-        m::MalRec,
+        m::MalListLike,
         LP::String,
         RP::String
     )

@@ -34,7 +34,7 @@ end
 "取出当前 pos 对应的 token。pos++"
 function next(r::Reader)
     ret = peek(r)
-    r.pos += ret!=nothing ? 1 : 0
+    r.pos += isnothing(ret) ? 0 : 1
     ret
 end
 
@@ -139,7 +139,7 @@ end
 #         ::T, 
 #         LP::String, 
 #         RP::String
-#     ) where T <: MalRec
+#     ) where T <: MalListLike
 #     ds = MalList()
 #     while !isnothing(peek(reader))
 #         endswith(peek(reader), "$LP") && break
@@ -157,7 +157,7 @@ function read_list(reader::Reader)
     list = MalList()
     while !isnothing(peek(reader))
         endswith(peek(reader), ")") && break
-        push!(list.val, read_form(reader))
+        push!(list, read_form(reader))
     end
     # 在读到 ")" 之前遇到 EOF
     isnothing(peek(reader)) && throw("[lex] unbalanced pair '('.")
@@ -171,7 +171,7 @@ function read_vector(reader::Reader)
     vec = MalVec()
     while !isnothing(peek(reader))
         endswith(peek(reader), "]") && break
-        push!(vec.val, read_form(reader))
+        push!(vec, read_form(reader))
     end
     # 在读到 "]" 之前遇到 EOF
     isnothing(peek(reader)) && throw("[lex] unbalanced pair '['.")
@@ -188,7 +188,7 @@ function read_hash(reader::Reader)
         key = read_atom(reader)
         val = read_form(reader)
         isnothing(val) && throw("[lex] unbalanced {k=>v} pair 'k=>?'.")
-        push!(hash.val, key => val)
+        push!(hash, key => val)
     end
     # 在读到 "}" 之前遇到 EOF
     isnothing(peek(reader)) && throw("[lex] unbalanced pair '{'.")
