@@ -64,22 +64,28 @@ struct MalDeref <: MalAtom
     val :: MalSym
 end
 
+struct MalFunc <: MalAtom
+    val :: Function
+end
+
 
 ## Composite Types
 struct MalList <: MalRec
     val :: Vector{MalType}
-    MalList() = new(Vector{MalType}())
 end
+MalList() = MalList(MalType[])
+
 struct MalVec <: MalRec
     val :: Vector{MalType}
-    MalVec() = new(Vector{MalVec}())
 end
+MalVec() = MalVec(MalType[])
+
 const MAL_KEY_TYPE = Union{MalSym, MalStr, MalKeyword, MalInt, MalBool}
 const MAL_HASH_DICT_TYPE = Dict{MAL_KEY_TYPE, MalType}
 struct MalHash <: MalType
     val :: MAL_HASH_DICT_TYPE
-    MalHash() = new(MAL_HASH_DICT_TYPE())
 end
+MalHash() = MalHash(MAL_HASH_DICT_TYPE())
 
 # quotes
 struct MalQuote <: MalType
