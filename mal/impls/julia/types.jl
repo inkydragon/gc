@@ -48,6 +48,7 @@ end
 struct MalSym <: MalAtom # identifier
     val :: Symbol
 end
+MalSym(s::AbstractString) = s |> Symbol |> MalSym
 struct MalStr <: MalAtom
     val :: AbstractString
 end
