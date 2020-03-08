@@ -1,7 +1,8 @@
-module Mal_REPL
+module MalREPL
+import REPL      # for script without REPL
+import ReplMaker # for Julia's REPL
 
-import REPL     # for script without REPL
-using ReplMaker # for Julia's REPL
+export start_repl, IN_JULIA_REPL
 
 # 判断是否在 Julia 的 REPL 中
 const IN_JULIA_REPL = isdefined(Base, :active_repl)
@@ -12,7 +13,6 @@ const MAL_PROMPT = "user> " # 自定义的 prompt
 const global BasicREPL_INPUT_LINE_FUNC = Vector{Function}()
 push!(BasicREPL_INPUT_LINE_FUNC, identity)
 
-export start_repl, IN_JULIA_REPL
 
 #= COPY FROM `REPL.jl` && `client.jl` ====================================== =#
 if NOT_IN_JULIA_REPL
@@ -95,7 +95,7 @@ end # end if NOT_IN_JULIA_REPL
 可自定义 prompt，输入处理函数，输出格式。
 支持从 julia 中启动；或者直接从脚本文件启动。
 """
-function start_repl(repl_func::Function=identity)
+function start_repl(repl_func::Function)
     if IN_JULIA_REPL
         ReplMaker.initrepl(
             repl_func,
@@ -117,7 +117,7 @@ function start_repl(repl_func::Function=identity)
     have_color = REPL.Terminals.hascolor(term)
     if term.term_type == "dumb"
         # overwrite REPL.run_frontend(repl::BasicREPL)
-        Mal_REPL.BasicREPL_INPUT_LINE_FUNC[] = repl_func
+        BasicREPL_INPUT_LINE_FUNC[] = repl_func
         active_repl = REPL.BasicREPL(term)
     else
         active_repl = REPL.LineEditREPL(term, have_color, true)
@@ -135,7 +135,7 @@ function start_repl(repl_func::Function=identity)
     end
 end # end of start_repl()
 
-end # end of module Mal_REPL
+end # module MalREPL
 
 # # for test
 # using .Mal_REPL

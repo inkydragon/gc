@@ -1,10 +1,14 @@
-# Step 2: Eval
-include("Mal_REPL.jl")
+module Mal
+# Step 3: Environments
+import Base
+include("repl.jl")
 include("types.jl")
-include("printer.jl")
 include("reader.jl")
+include("printer.jl")
 include("env.jl")
-using .Mal_REPL
+using .MalREPL # start_repl
+
+export start_repl
 
 const dbg_stack = [true]
 
@@ -82,4 +86,9 @@ function main_loop(str)
     end
 end
 
-start_repl(main_loop)
+MalREPL.start_repl() = start_repl(main_loop)
+
+end # module Mal
+
+using .Mal
+start_repl()

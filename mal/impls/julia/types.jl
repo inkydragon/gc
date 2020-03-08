@@ -1,16 +1,24 @@
-# debug help macro
-const global debug = [false]
+#= mal_debug help macro =#
+const global mal_debug = [false]
 macro dbg(expr)
-    :( debug[] && $(esc(expr)) )
+    :( mal_debug[] && $(esc(expr)) )
 end
-# debug[] = true
-#= Type def =#
+# mal_debug[] = true
 
+
+#= Type def =#
 """
     abstract type MalType end
 
+abstract subtypes:
++ MalAtom
+    MalNum
++ MalRec
+    + MalListLike
+
 ## Primitive Types
-+ MalNum    # number
++ MalInt    <: MalNum
++ MalFloat  <: MalNum
 + MalSym    # Symbol, identifier
 + MalStr    # String
 + MalNil
@@ -18,19 +26,17 @@ end
 + MalKeyword
 + MalComment
 + MalDeref
++ MalFunc
 
 ## Composite Types
-+ MalList
-+ MalVec
-+ MalHash
-
++ MalList   <: MalListLike
++ MalVec    <: MalListLike
++ MalHash   <: MalRec
 + MalQuote
 + MalUnquote
 + MalQuasiQuote
 + MalSpliceUnquote
-
 + MalMetadata
-
 """
 abstract type MalType end
 abstract type MalAtom <: MalType end

@@ -1,8 +1,3 @@
-# module Mal_Env
-include("types.jl")
-
-export MalEnv, set, find, get
-
 const EnvDict = Dict{MAL_KEY_TYPE, MalType}
 mutable struct MalEnv
     data  :: EnvDict
@@ -35,5 +30,3 @@ function Base.get(env::MalEnv, k::MAL_KEY_TYPE)
 end
 Base.getindex(env::MalEnv, k::MAL_KEY_TYPE) = get(env, k)
 Base.getindex(env::MalEnv, k::Symbol) = get(env, MalSym(k))
-
-# end # module MalEnv

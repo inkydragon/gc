@@ -1,6 +1,7 @@
-include("types.jl")
-# debug[] = true
-const dbg_lex = [false]
+# reader.jl
+
+# mal_debug[] = true
+const global mal_dbg_lex = [false]
 const REGEX_TABLE = Dict(
     # 初步分割
     :whitespaces_commas  => raw"[\s,]*",
@@ -80,8 +81,8 @@ function tokenize(program::AbstractString)
     m = match(all_token, program)
     offset = m.offset
     while checkbounds(Bool, program, offset)
-        # @dbg dbg_lex[] && start_offset = offset+m.offsets[1] - 1
-        # @dbg dbg_lex[] && println(
+        # @dbg mal_dbg_lex[] && start_offset = offset+m.offsets[1] - 1
+        # @dbg mal_dbg_lex[] && println(
         #     "'$program'm.match='$(m.match)'\n",
         #     " " ^ (start_offset),
         #     "$(m[:1])<=[$start_offset]",
@@ -91,13 +92,13 @@ function tokenize(program::AbstractString)
         m = match(all_token, program[offset:end])
     end
     # filter!(x->x!="", tokens)
-    @dbg dbg_lex[] && println(tokens)
+    @dbg mal_dbg_lex[] && println(tokens)
     tokens
 end
 
 "主 lexer。根据首字母进行分派"
 function read_form(reader::Reader)
-    @dbg dbg_lex[] && println("[header] $(peek(reader))")
+    @dbg mal_dbg_lex[] && println("[header] $(peek(reader))")
 
     # rec data
     if startswith(peek(reader), "(")
@@ -149,7 +150,7 @@ end
 #     isnothing(peek(reader)) && throw("[lex] unbalanced pair '$LP'.")
 #     eat(reader, "$RP")
 
-#     @dbg dbg_lex[] && println("[$T] ret $ds")
+#     @dbg mal_dbg_lex[] && println("[$T] ret $ds")
 #     ds
 # end
 
@@ -163,7 +164,7 @@ function read_list(reader::Reader)
     isnothing(peek(reader)) && throw("[lex] unbalanced pair '('.")
     eat(reader, ")")
 
-    @dbg dbg_lex[] && println("[list] ret $list")
+    @dbg mal_dbg_lex[] && println("[list] ret $list")
     list
 end
 
@@ -177,7 +178,7 @@ function read_vector(reader::Reader)
     isnothing(peek(reader)) && throw("[lex] unbalanced pair '['.")
     eat(reader, "]")
 
-    @dbg dbg_lex[] && println("[vec] ret $vec")
+    @dbg mal_dbg_lex[] && println("[vec] ret $vec")
     vec
 end
 
@@ -194,7 +195,7 @@ function read_hash(reader::Reader)
     isnothing(peek(reader)) && throw("[lex] unbalanced pair '{'.")
     eat(reader, "}")
 
-    @dbg dbg_lex[] && println("[hash] ret $hash")
+    @dbg mal_dbg_lex[] && println("[hash] ret $hash")
     hash
 end
 
@@ -262,7 +263,7 @@ function match_str(tk::AbstractString)
     m = match(ONLY(REGEX_TABLE[:string]), tk)
     if isnothing(m)
         # 引号未闭合
-        @dbg dbg_lex[] && println("($tk)")
+        @dbg mal_dbg_lex[] && println("($tk)")
         throw("[lex] unbalanced quote!")
     elseif !isnothing(m_err) && length(m_err[:1]) % 2 == 1
         # 末尾有奇数个 \, 转移了最后的引号
@@ -276,7 +277,7 @@ end
 "lex 原子类型"
 function read_atom(reader::Reader)
     tk = next(reader)
-    @dbg dbg_lex[] && println("read_atom: $tk")
+    @dbg mal_dbg_lex[] && println("read_atom: $tk")
 
     if isnothing(tk)
         nothing
@@ -289,7 +290,7 @@ function read_atom(reader::Reader)
     elseif occursin(ONLY(REGEX_TABLE[:identifier]), tk)
         match_id(tk)
     elseif occursin(ONLY(REGEX_TABLE[:comments]), tk)
-        @dbg dbg_lex[] && println("ret MalComment")
+        @dbg mal_dbg_lex[] && println("ret MalComment")
         MalComment(tk)
     else
         throw("[read_atom] unknown token ($tk)")

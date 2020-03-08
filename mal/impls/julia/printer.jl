@@ -1,5 +1,4 @@
-include("types.jl")
-import Base.show
+# printer.jl
 
 # fallback
 Base.show(io::IO, m::MalType) = print(io, m.val)

@@ -1,9 +1,10 @@
 # Step 1: REPL skeleton
-include("Mal_REPL.jl")
+import Base
+include("repl.jl")
 include("types.jl")
-include("printer.jl")
 include("reader.jl")
-using .Mal_REPL
+include("printer.jl")
+using .MalREPL # start_repl
 
 function READ(str)
     read_str(str)

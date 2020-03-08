@@ -1,7 +1,7 @@
 # Step 0: REPL skeleton
-
-include("Mal_REPL.jl")
-using .Mal_REPL
+import Base
+include("repl.jl")
+using .MalREPL # start_repl
 
 function READ(str)
     str
@@ -31,4 +31,4 @@ function main_loop()
     end # while true loop end
 end
 
-Mal_REPL.start_repl(rep)
+start_repl(rep)
