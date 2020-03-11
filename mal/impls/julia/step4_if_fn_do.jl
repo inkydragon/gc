@@ -128,7 +128,7 @@ function EVAL(ast::MalList, env::MalEnv)
 end
 
 function PRINT(exp)
-    pr_str(exp)
+    pr_str(exp) |> print
 end
 
 function rep(str, repl_env=ns)

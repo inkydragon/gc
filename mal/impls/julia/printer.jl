@@ -45,3 +45,5 @@ Base.show(io::IO, m::MalMetadata) =
 
 pr_str(m::MalType, print_readably::Bool=true) =
     print_readably ? "$m" : unescape_string("$m")
+# pr_str(s::MalStr, print_readably::Bool=true) =
+#     print_readably ? s.val : unescape_string(s.val)

@@ -19,7 +19,7 @@ function PRINT(exp)
 end
 
 function rep(str)
-    str |> READ |> s->EVAL(s,"") |> PRINT
+    str |> READ |> s->EVAL(s,"") |> PRINT |> print
 end
 
 function main_loop(str)

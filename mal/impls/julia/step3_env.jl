@@ -71,7 +71,7 @@ repl_env = MalEnv(
     :/ => div,
 )
 function rep(str)
-    str |> READ |> s->EVAL(s,repl_env) |> PRINT
+    str |> READ |> s->EVAL(s,repl_env) |> PRINT |> print
 end
 
 function main_loop(str)

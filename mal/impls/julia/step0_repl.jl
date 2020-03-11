@@ -16,19 +16,19 @@ function PRINT(exp)
 end
 
 function rep(str)
-    str |> READ |> s->EVAL(s,"") |> PRINT
+    str |> READ |> s->EVAL(s,"") |> PRINT |> print
 end
 
-function main_loop()
-    PROMPT = "user> "
+# function main_loop()
+#     PROMPT = "user> "
 
-    print(PROMPT)
-    for line in eachline(stdin)
-        ('\x04' in line) && break # ^D
+#     print(PROMPT)
+#     for line in eachline(stdin)
+#         ('\x04' in line) && break # ^D
 
-        line |> rep |> println
-        print(PROMPT)
-    end # while true loop end
-end
+#         line |> rep |> println
+#         print(PROMPT)
+#     end # while true loop end
+# end
 
 start_repl(rep)

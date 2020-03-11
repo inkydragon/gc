@@ -17,27 +17,10 @@ push!(BasicREPL_INPUT_LINE_FUNC, identity)
 #= COPY FROM `REPL.jl` && `client.jl` ====================================== =#
 if NOT_IN_JULIA_REPL
 
-# overwrite output prompt
-# ref: https://github.com/KristofferC/OhMyREPL.jl/blob/master/src/output_prompt_overwrite.jl
-# stdlib/REPL.jl#L129
-# 修改：用于自定义输出
-#   1. show => print
-#   2. 注释掉 println(io) 消除换行
-function REPL.display(d::REPL.REPLDisplay, mime::MIME"text/plain", x)
-    io = REPL.outstream(d.repl)
-    get(io, :color, false) && write(io, REPL.answer_color(d.repl))
-    # show(IOContext(io, :limit => true, :module => Main), mime, x)
-    print(IOContext(io, :limit => true, :module => Main), x)
-    print
-    # println(io)
-    nothing
-end
-
 # stdlib/REPL.jl#L215
 # 修改：用于支持 BasicREPL 的自定义
 #   1. MAL_PROMPT
 #   2. BasicREPL_INPUT_LINE_FUNC
-#   3. 注释掉 write(repl.terminal, '\n') 消除换行
 function REPL.run_frontend(repl::REPL.BasicREPL, backend::REPL.REPLBackendRef)
     d = REPL.REPLDisplay(repl)
     dopushdisplay = !in(d,Base.Multimedia.displays)
@@ -105,9 +88,6 @@ function start_repl(repl_func::Function)
             repl = Base.active_repl,
             mode_name = :mal_lisp,
             # valid_input_checker::Function = (s -> true),
-            # keymap::Dict = REPL.LineEdit.default_keymap_dict,
-            # completion_provider = REPL.REPLCompletionProvider(),
-            # sticky_mode = true,
             startup_text = false
         )
     else # NOT_IN_JULIA_REPL: ref: https://discourse.juliacn.com/t/topic/3038
