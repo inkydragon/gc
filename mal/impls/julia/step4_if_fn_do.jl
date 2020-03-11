@@ -6,6 +6,7 @@ include("types.jl")
 include("reader.jl")
 include("printer.jl")
 include("env.jl")
+include("core.jl")
 using .MalREPL # start_repl
 
 export start_repl
@@ -45,12 +46,78 @@ function EVAL(ast::MalList, env::MalEnv)
 
     f = ast[1]
     if MalSym("def!") == f
+        # (def! <2-sym> <3-val>)
+        @assert 3 == length(ast)
         env[ast[2]] = EVAL(ast[3], env)
     elseif MalSym("let*") == f
+        # (let* <2-bindings> <3-mal>)
+        @assert 3 == length(ast)
         let_env = MalEnv(env)
         bind_env!(let_env, ast[2])
         EVAL(ast[3], let_env)
+    elseif MalSym("do") == f
+        # (do <2+args...>) => (args[end])
+        @assert length(ast) >= 2
+        @dbg println("[do] args: $(ast[2:end])")
+        # res = MalNil()
+        # for exp in ast[2:end]
+        #     res = EVAL(exp, env)
+        # end
+        # @dbg println("[do] res: $res")
+        # res
+        [ EVAL(exp, env) for exp in ast[2:end] ][end]
+    elseif MalSym("if") == f
+        # (if <2-case> <3-t-case> [<4-f-case>])
+        @assert length(ast) >= 3
+        case = EVAL(ast[2], env)
+        if  (case isa MalNil) || (case isa MalBool) && !case.val
+            # false: nil | false
+            res_mal = (3==length(ast)) ? 
+                MalNil() :  # (if false <_>)
+                ast[4]      # (if false <_> <4-f-case>)
+        else
+            # true: anything else [0, (), '', ...]
+            res_mal = ast[3] # (if false <3-t-case> <_>)
+        end
+        EVAL(res_mal, env)
+    elseif MalSym("fn*") == f
+        # (fn* <2-bds> <3-body>)
+        @assert 3 == length(ast)
+        bds, fn_body = ast[2], ast[3]
+
+        bd_len = length(bds)
+        # if 2==bd_len && MalSym("&")==bds[1]
+        #     # variadic function parameters
+        #     # (fn* (& <2.2-bd>) <3-body>)
+        #     @assert 2==length(bds)
+        #     bd = bds[2]
+        #     _one_arg(args) = args |> MalList |> MalVec
+        #     f = (args...) -> EVAL(
+        #         fn_body, 
+        #         MalEnv(MalList(bd), _one_arg(args), env)
+        #     )
+        # else
+        if bd_len >= 1
+            f = (args...) -> EVAL(
+                fn_body, 
+                MalEnv(bds, MalVec(args), env)
+            )
+            @dbg f = (args...) -> begin
+                println("[fn*] bds=$bds; args=$args")
+                new_env = MalEnv(bds, MalVec(args), env)
+                println("[fn*] new env:")
+                for (k,v) in new_env.data
+                    println("  $k => $v")
+                end
+                println("[fn*] start eval")
+                EVAL(fn_body, new_env)
+            end
+        else # no binding args
+            f = () -> EVAL(fn_body, MalEnv(env))
+        end
+        MalFunc(f)
     else # _default_
+        # (<1-fn> <2+args...>)
         new_ast = eval_ast(ast, env)
         # 取出函数与参数
         f = new_ast[1]
@@ -64,15 +131,10 @@ function PRINT(exp)
     pr_str(exp)
 end
 
-repl_env = MalEnv(
-    :+ => +,
-    :- => -,
-    :* => *,
-    :/ => div,
-)
-function rep(str)
+function rep(str, repl_env=ns)
     str |> READ |> s->EVAL(s,repl_env) |> PRINT
 end
+rep("(def! not (fn* (a) (if a false true)))")
 
 function main_loop(str)
     try

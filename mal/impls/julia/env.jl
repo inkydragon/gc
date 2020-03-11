@@ -13,6 +13,34 @@ MalEnv(data::EnvDict) = MalEnv(data, nothing)
 MalEnv(p::Pair{Symbol,<:Function}...) =
     [MalSym(s)=>MalFunc(f) for (s,f) in p] |>
         EnvDict |> MalEnv
+# MalEnv(
+#     binds::MalListLike, 
+#     exprs::MalListLike, 
+#     outer::Union{MalEnv, Nothing}=nothing
+# ) = zip(binds.val,exprs.val) |> EnvDict |> d->MalEnv(d,outer)
+function MalEnv(
+    binds::MalListLike, 
+    exprs::MalListLike, 
+    outer::Union{MalEnv, Nothing}=nothing
+)
+    env = MalEnv(outer)
+    for i in 1:length(binds)
+        bind = binds[i]
+
+        if MalSym("&")!=bind
+            env[bind] = exprs[i]
+            continue
+        end
+
+        # (fn*  <binds>             <exprs>       )
+        # (fn* (<...> <i-&> <i+1>) (<...> <i:end>))
+        bind = binds[i+1]
+        expr = exprs[i:end] |> MalList
+        env[bind] = expr
+        break
+    end
+    env
+end
 
 Base.setindex!(env::MalEnv, v::MalType, k::MAL_KEY_TYPE) =
     env.data[k] = v

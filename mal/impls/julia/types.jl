@@ -59,6 +59,7 @@ struct MalStr <: MalAtom
     val :: AbstractString
 end
 struct MalNil <: MalAtom end
+MalNil(_) = MalNil()
 struct MalBool <: MalAtom
     val :: Bool
 end
@@ -76,17 +77,23 @@ struct MalFunc <: MalAtom
     val :: Function
 end
 
+struct MalNothing <: MalAtom end
+MalNothing(_...) = MalNothing()
 
 ## Composite Types
 struct MalList <: MalListLike
     val :: Vector{MalType}
 end
 MalList() = MalList(MalType[])
+MalList(m::MalType) = MalList(MalType[m])
+MalList(tup::Tuple) = collect(MalType, tup) |> MalList
 
 struct MalVec <: MalListLike
     val :: Vector{MalType}
 end
 MalVec() = MalVec(MalType[])
+MalVec(m::MalType) = MalVec(MalType[m])
+MalVec(tup::Tuple) = collect(MalType, tup) |> MalVec
 
 const MAL_KEY_TYPE = Union{MalSym, MalStr, MalKeyword, MalInt, MalBool}
 const MAL_HASH_DICT_TYPE = Dict{MAL_KEY_TYPE, MalType}
@@ -120,7 +127,9 @@ end
 ## MalRec
 # iterate
 Base.isempty(m::MalRec)         = isempty(m.val)
+Base.isempty(::MalNil)          = true
 Base.length(m::MalRec)          = length(m.val)
+Base.length(m::MalNil)          = 0
 Base.iterate(m::MalRec)         = iterate(m.val)
 Base.iterate(m::MalRec, idx)    = iterate(m.val, idx)
 Base.eltype(::Type{<:MalListLike})  = MalType
@@ -153,3 +162,16 @@ for op in (:+, :-, :*)
     end
 end
 Base.:div(x::MalInt, y::MalInt) = MalInt(div(x.val, y.val))
+
+# isequal
+Base.:(==)(m1::T1, m2::T2) where {T1<:MalType, T2<:MalType} =
+    T1==T2 &&
+    typeof(m1.val)==typeof(m2.val) &&
+    isequal(m1.val, m2.val)
+Base.:(==)(::MalNil, ::T) where {T<:MalType} = MalNil==T
+Base.:(==)(::MalNil, ::MalNil) = true
+for op in (:>, :<, :(>=), :(<=))
+    @eval begin
+        Base.$op(x::MalNum, y::MalNum) = MalBool($op(x.val, y.val))
+    end
+end

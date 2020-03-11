@@ -9,7 +9,8 @@ Base.show(io::IO, m::MalNil) = print(io, "nil")
 Base.show(io::IO, m::MalComment) = nothing
 Base.show(io::IO, m::MalKeyword) = print(io, repr(m.val))
 Base.show(io::IO, m::MalDeref) = print(io, "(deref $(m.val))")
-
+Base.show(io::IO, m::MalFunc) = print(io, "#<function>")
+Base.show(io::IO, m::MalNothing) = nothing
 
 ## Composite Types
 function rec_ds_show(
@@ -42,6 +43,5 @@ Base.show(io::IO, m::MalSpliceUnquote) =
 Base.show(io::IO, m::MalMetadata) =
     print(io, "(with-meta $(m.val) $(m.meta))")
 
-
-pr_str(m::MalType, print_readably=true) =
+pr_str(m::MalType, print_readably::Bool=true) =
     print_readably ? "$m" : unescape_string("$m")
