@@ -1,0 +1,39 @@
+\documentclass[UTF8]{ctexart}
+
+\begin{document} % base-2 long div
+% - [diagrams - How can I show base-2 long division? - TeX - LaTeX Stack Exchange](https://tex.stackexchange.com/a/29034/125341)
+%% ref: TUGboat, Vol18(1997) No.2: p75
+% def \digitwidth
+\newdimen\digitwidth
+    \settowidth\digitwidth{0}
+\def~{\hspace{\digitwidth}}
+% def\divrule
+\def\divrule#1#2{%
+    \noalign{\moveright#1\digitwidth%
+        \vbox{\hrule width#2\digitwidth}}}
+\def\alg{\hphantom{\big|}}
+
+% div start
+$P$ 除数 $\rightarrow$ 1101
+\begin{tabular}[b]{@{}l@{}}
+    % 一下前置空格均为手工对齐
+    \alg~~~110101 $\gets Q$ (商)
+    \\\hline
+    \big|\begin{tabular}[t]{@{}l@{}}
+        101001000 $\gets 2^n M$ (被除数) \\
+        1101 \\ \divrule{0}{4}
+        ~1110 \\
+        ~1101 \\ \divrule{1}{4}
+        ~~0111 \\
+        ~~0000 \\ \divrule{2}{4}
+        ~~~1110 \\
+        ~~~1101 \\ \divrule{3}{4}
+        ~~~~0110 \\
+        ~~~~0000 \\ \divrule{4}{4}
+        ~~~~~1100 \\
+        ~~~~~1101 \\ \divrule{5}{4}
+        ~~~~~~001 $\gets R$ (余数)
+    \end{tabular}
+\end{tabular}
+
+\end{document}
