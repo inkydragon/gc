@@ -168,6 +168,10 @@ Base.:(==)(m1::T1, m2::T2) where {T1<:MalType, T2<:MalType} =
     T1==T2 &&
     typeof(m1.val)==typeof(m2.val) &&
     isequal(m1.val, m2.val)
+Base.:(==)(m1::T1, m2::T2) where {T1<:MalListLike, T2<:MalListLike} =
+    (0==length(m1)==length(m2)) ||
+    length(m1)==length(m2) &&
+    isequal(m1.val, m2.val)
 Base.:(==)(::MalNil, ::T) where {T<:MalType} = MalNil==T
 Base.:(==)(::MalNil, ::MalNil) = true
 for op in (:>, :<, :(>=), :(<=))

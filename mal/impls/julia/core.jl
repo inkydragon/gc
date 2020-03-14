@@ -9,7 +9,7 @@ _mal_pr_str(mals::MalType...) =
     join([pr_str(m,true)  for m in mals], " ") |>
         MalStr
 _mal_str(mals::MalType...) =
-    join([pr_str(m,false) for m in mals], " ") |>
+    join([pr_str(m,false) for m in mals], "") |>
         MalStr
 _mal_prn(mals::MalType...) =
     join([pr_str(m,true)  for m in mals], " ") |>
@@ -21,9 +21,10 @@ _mal_println(mals::MalType...) =
 _mal_list()                 = MalList()
 _mal_list(m::MalType)       = m |> MalList
 _mal_list(m::MalType...)    = [m...] |> MalList
-_mal_is_list(m::MalType)    = (m isa MalList) |> MalBool
+_mal_is_list(::MalList)     = MalBool(true)
+_mal_is_list(::MalType)     = MalBool(false)
 _mal_is_empty(m::MalType)   = m |> isempty |> MalBool
-_mal_count(m::MalType)      = m |> length |> MalInt
+_mal_count(m::MalType)      = m |> length  |> MalInt
 
 const ns = MalEnv(
     :+ => +,
