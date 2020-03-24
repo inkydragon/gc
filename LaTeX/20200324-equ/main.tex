@@ -1,0 +1,76 @@
+\documentclass[UTF8,oneside]{ctexbook}
+\usepackage{amsmath}
+
+\begin{document}
+\[\begin{array}{l}
+\mathop{\lim}\limits_{t \to \infty} 
+\left( 
+{
+    {c_x}(t)
+    - {
+        1 
+        \mathord{
+            \left/
+                {\vphantom {1 N}} 
+            \right.
+            \kern-\nulldelimiterspace
+        } 
+        N
+    } {
+        e^	{
+            \left[ {
+                    \begin{array}{*{20}{c}}
+                        0&1\\
+                        0&0
+                    \end{array}
+            } \right]
+            t
+        }
+    } \sum\limits_{i = 1}^N {{x_i}(0)} 
+} \right.\\ % 公式换行后括号大小不一致
+\left.  { 
+    + {
+        1 \mathord{
+            \left/
+                {\vphantom {1 N}} 
+            \right.
+        \kern-\nulldelimiterspace} 
+        N
+    } \sum\limits_{i = 1}^N {{f_{ix}}(t)} 
+} 
+\right) = 0,
+\end{array}\]
+
+%% ref1
+% LaTeX技巧428：关于数学公式输入中括号的换行问题
+% https://www.latexstudio.net/archives/8039.html)
+%% ref2
+% About big parenthesis larger than Bigg
+% https://tex.stackexchange.com/questions/6794/about-big-parenthesis-larger-than-bigg
+\makeatletter
+\newcommand{\vast}{\bBigg@{4}}
+\newcommand{\Vast}{\bBigg@{5}}
+\makeatother
+
+
+\[\begin{array}{l}
+\mathop{\lim}\limits_{t \to \infty}
+\Vast(
+c_x(t)
+-
+1/Ne^{
+    \left[ 
+        \begin{array}{*{20}{c}}
+            0 & 1 \\
+            0 & 0 \\
+        \end{array} 
+    \right] 
+    t
+}
+\sum_{i=1}^N{x_i(0)}
+\\ +
+1/N\sum_{i=1}^N{f_{ix}(t)}
+\Vast) = 0,
+\end{array}\]
+
+\end{document}
