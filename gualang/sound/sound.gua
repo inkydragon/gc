@@ -1,0 +1,60 @@
+const math = import("math") // 标准库
+const wave = import("wave") // wave.gua
+
+// 截断 n, 确保 n in [0, 255]
+const clamp = function(n) {
+    if (n > 255) {
+        n = 255
+    } else if (n < 0) {
+        n = 0
+    }
+    return n
+} // clamp
+
+const chord = function(frequency) {
+    var sampleFrequency = 10000 // 10k
+    // var frequency = c
+    var volume = 50
+    var samplesLength = int(sampleFrequency / 4)
+    var r = 2.0 * math.pi * frequency / sampleFrequency
+    var data = []
+
+    var i = 0
+    while (i < samplesLength) {
+        var v = 128 + int(volume * math.sin(i * r))
+        data.add(v)
+
+        i += 1
+    }
+    return data
+}
+
+const _main = function() {
+    // ref: [Frequencies of Musical Notes, A4 = 440 Hz](https://pages.mtu.edu/~suits/notefreqs.html)
+    var C4 = 261.63
+    var D4 = 293.66
+    var E4 = 329.63
+    var F4 = 349.23
+    var G4 = 392.00
+    var A4 = 440.00
+    var B4 = 493.88
+
+    // var melody = [E4]
+    // var melody = [E4, E4, F4, G4, G4, F4, E4, D4]
+    // var melody = [E4, E4, F4, G4, G4, F4, E4, D4, C4, C4, D4, E4, E4, D4, D4]
+    var melody = [E4, D4, C4, D4, E4, E4, E4]
+    var ds = []
+    var i = 0
+    while (i < melody.length()) {
+        var c = melody[i]
+        var d = chord(c)
+        ds += d
+
+        i += 1
+    }
+
+    const filepath = 'sound.wav'
+    wave.saveFileFromPcm(filepath, ds, 10000)
+} // _main
+
+_main()
