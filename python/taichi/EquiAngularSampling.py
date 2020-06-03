@@ -300,7 +300,7 @@ def render(t: ti.f32):
     return
 
 
-def main(img=False):
+def main(output_img=False):
     """
     img = True # 输出 png
     """
@@ -310,10 +310,10 @@ def main(img=False):
         
         render(ts)
         gui.set_image(pixels.to_numpy())
-        if img:
-            gui.show()
-        else:
+        if output_img:
             gui.show(f'frame/{ts:04d}.png')
+        else:
+            gui.show()
 
 
 gui = ti.GUI(GUI_TITLE, res=wh)
