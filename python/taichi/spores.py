@@ -3,6 +3,7 @@ import time
 
 # ti.init(debug=True, arch=ti.cpu)
 ti.init(arch=ti.gpu)
+ti.core.toggle_advanced_optimization(False)
 
 """
 spores - by: mprice
@@ -126,29 +127,29 @@ def distfunc(iTime: ti.f32, pos: ti.Vector) -> ti.f32:
     d: ti.f32 = sphered
     ## 下面是给球上添加突起
     d = min(d, placedBarrel(pos, 0., 0.))
-    # d = min(d, placedBarrel(pos, 0.8, 0.))
-    # d = min(d, placedBarrel(pos, 1.6, 0.))
-    # d = min(d, placedBarrel(pos, 2.4, 0.))
-    # d = min(d, placedBarrel(pos, 3.2, 0.))
-    # d = min(d, placedBarrel(pos, 4.0, 0.))
-    # d = min(d, placedBarrel(pos, 4.8, 0.))
-    # d = min(d, placedBarrel(pos, 5.6, 0.))
+    d = min(d, placedBarrel(pos, 0.8, 0.))
+    d = min(d, placedBarrel(pos, 1.6, 0.))
+    d = min(d, placedBarrel(pos, 2.4, 0.))
+    d = min(d, placedBarrel(pos, 3.2, 0.))
+    d = min(d, placedBarrel(pos, 4.0, 0.))
+    d = min(d, placedBarrel(pos, 4.8, 0.))
+    d = min(d, placedBarrel(pos, 5.6, 0.))
 
-    # d = min(d, placedBarrel(pos, 0.8, PI / 2.0))
-    # d = min(d, placedBarrel(pos, 1.6, PI / 2.0))
-    # d = min(d, placedBarrel(pos, 2.4, PI / 2.0))
-    # d = min(d, placedBarrel(pos, 4.0, PI / 2.0))
-    # d = min(d, placedBarrel(pos, 4.8, PI / 2.0))
-    # d = min(d, placedBarrel(pos, 5.6, PI / 2.0))
-    # d = min(d, placedBarrel(pos, 1.2, PI / 4.0))
-    # d = min(d, placedBarrel(pos, 2.0, PI / 4.0))
+    d = min(d, placedBarrel(pos, 0.8, PI / 2.0))
+    d = min(d, placedBarrel(pos, 1.6, PI / 2.0))
+    d = min(d, placedBarrel(pos, 2.4, PI / 2.0))
+    d = min(d, placedBarrel(pos, 4.0, PI / 2.0))
+    d = min(d, placedBarrel(pos, 4.8, PI / 2.0))
+    d = min(d, placedBarrel(pos, 5.6, PI / 2.0))
+    d = min(d, placedBarrel(pos, 1.2, PI / 4.0))
+    d = min(d, placedBarrel(pos, 2.0, PI / 4.0))
 
-    # d = min(d, placedBarrel(pos, 1.2, 3.0 * PI / 4.0))
-    # d = min(d, placedBarrel(pos, 2.0, 3.0 * PI / 4.0))
-    # d = min(d, placedBarrel(pos, 1.2, 5.0 * PI / 4.0))
-    # d = min(d, placedBarrel(pos, 2.0, 5.0 * PI / 4.0))
-    # d = min(d, placedBarrel(pos, 1.2, 7.0 * PI / 4.0))
-    # d = min(d, placedBarrel(pos, 2.0, 7.0 * PI / 4.0))
+    d = min(d, placedBarrel(pos, 1.2, 3.0 * PI / 4.0))
+    d = min(d, placedBarrel(pos, 2.0, 3.0 * PI / 4.0))
+    d = min(d, placedBarrel(pos, 1.2, 5.0 * PI / 4.0))
+    d = min(d, placedBarrel(pos, 2.0, 5.0 * PI / 4.0))
+    d = min(d, placedBarrel(pos, 1.2, 7.0 * PI / 4.0))
+    d = min(d, placedBarrel(pos, 2.0, 7.0 * PI / 4.0))
 
     flag[HIT_BARREL] = (d != sphered)
 
