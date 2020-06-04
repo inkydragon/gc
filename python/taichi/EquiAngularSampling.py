@@ -9,7 +9,7 @@ ti.init(arch=ti.gpu)
 # Implementation of equi-angular sampling for raymarching through homogenous media
 # https://www.shadertoy.com/view/Xdf3zB
 GUI_TITLE = "Equi-Angular Sampling"
-w, h = wh = (512, 256)
+w, h = wh = (640, 360)
 pixels = ti.Vector(3, dt=ti.f32, shape=wh)
 
 ## 常量定义
@@ -308,7 +308,7 @@ def main(output_img=False):
         if gui.get_event(ti.GUI.ESCAPE):
             exit()
         
-        render(ts)
+        render(ts * 0.02)
         gui.set_image(pixels.to_numpy())
         if output_img:
             gui.show(f'frame/{ts:04d}.png')
