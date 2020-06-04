@@ -1,4 +1,5 @@
 import taichi as ti
+import time
 
 # ti.init(debug=True, arch=ti.cpu)
 ti.init(arch=ti.gpu)
@@ -18,13 +19,11 @@ MAX_DIST = 20.0
 EPSILON = 0.001
 PI = 3.14159265
 
-true = 1
-false = 0
 HIT_HOLE = 0
 HIT_BARREL = 1
 flag = ti.var(ti.i32, shape=2)
-flag[HIT_HOLE] = false
-flag[HIT_BARREL] = false
+flag[HIT_HOLE] = False
+flag[HIT_BARREL] = False
 
 ## Shader help func
 @ti.func
@@ -92,7 +91,7 @@ def barrel(pos: ti.Vector) -> ti.f32:
     holed: ti.f32 = -sphere(pos, 0.25)
     d = max(d, holed)
     if holed == d:
-        flag[HIT_HOLE] = true
+        flag[HIT_HOLE] = True
     else:
         flag[HIT_HOLE] = flag[HIT_HOLE]
     
@@ -118,37 +117,38 @@ def distfunc(iTime: ti.f32, pos: ti.Vector) -> ti.f32:
     pos = (pos % c) - 0.5*c
     pos = rotateX(pos, iTime)
 
-    flag[HIT_HOLE] = false
-    flag[HIT_BARREL] = false
+    flag[HIT_HOLE] = False
+    flag[HIT_BARREL] = False
 
     # Any of you smart people have a domain transformation way to
     # do a rotational tiling effect instead of this? :)
     sphered: ti.f32 = sphere(pos, 2.0)
     d: ti.f32 = sphered
+    ## 下面是给球上添加突起
     d = min(d, placedBarrel(pos, 0., 0.))
-    d = min(d, placedBarrel(pos, 0.8, 0.))
-    d = min(d, placedBarrel(pos, 1.6, 0.))
-    d = min(d, placedBarrel(pos, 2.4, 0.))
-    d = min(d, placedBarrel(pos, 3.2, 0.))
-    d = min(d, placedBarrel(pos, 4.0, 0.))
-    d = min(d, placedBarrel(pos, 4.8, 0.))
-    d = min(d, placedBarrel(pos, 5.6, 0.))
+    # d = min(d, placedBarrel(pos, 0.8, 0.))
+    # d = min(d, placedBarrel(pos, 1.6, 0.))
+    # d = min(d, placedBarrel(pos, 2.4, 0.))
+    # d = min(d, placedBarrel(pos, 3.2, 0.))
+    # d = min(d, placedBarrel(pos, 4.0, 0.))
+    # d = min(d, placedBarrel(pos, 4.8, 0.))
+    # d = min(d, placedBarrel(pos, 5.6, 0.))
 
-    d = min(d, placedBarrel(pos, 0.8, PI / 2.0))
-    d = min(d, placedBarrel(pos, 1.6, PI / 2.0))
-    d = min(d, placedBarrel(pos, 2.4, PI / 2.0))
-    d = min(d, placedBarrel(pos, 4.0, PI / 2.0))
-    d = min(d, placedBarrel(pos, 4.8, PI / 2.0))
-    d = min(d, placedBarrel(pos, 5.6, PI / 2.0))
-    d = min(d, placedBarrel(pos, 1.2, PI / 4.0))
-    d = min(d, placedBarrel(pos, 2.0, PI / 4.0))
+    # d = min(d, placedBarrel(pos, 0.8, PI / 2.0))
+    # d = min(d, placedBarrel(pos, 1.6, PI / 2.0))
+    # d = min(d, placedBarrel(pos, 2.4, PI / 2.0))
+    # d = min(d, placedBarrel(pos, 4.0, PI / 2.0))
+    # d = min(d, placedBarrel(pos, 4.8, PI / 2.0))
+    # d = min(d, placedBarrel(pos, 5.6, PI / 2.0))
+    # d = min(d, placedBarrel(pos, 1.2, PI / 4.0))
+    # d = min(d, placedBarrel(pos, 2.0, PI / 4.0))
 
-    d = min(d, placedBarrel(pos, 1.2, 3.0 * PI / 4.0))
-    d = min(d, placedBarrel(pos, 2.0, 3.0 * PI / 4.0))
-    d = min(d, placedBarrel(pos, 1.2, 5.0 * PI / 4.0))
-    d = min(d, placedBarrel(pos, 2.0, 5.0 * PI / 4.0))
-    d = min(d, placedBarrel(pos, 1.2, 7.0 * PI / 4.0))
-    d = min(d, placedBarrel(pos, 2.0, 7.0 * PI / 4.0))
+    # d = min(d, placedBarrel(pos, 1.2, 3.0 * PI / 4.0))
+    # d = min(d, placedBarrel(pos, 2.0, 3.0 * PI / 4.0))
+    # d = min(d, placedBarrel(pos, 1.2, 5.0 * PI / 4.0))
+    # d = min(d, placedBarrel(pos, 2.0, 5.0 * PI / 4.0))
+    # d = min(d, placedBarrel(pos, 1.2, 7.0 * PI / 4.0))
+    # d = min(d, placedBarrel(pos, 2.0, 7.0 * PI / 4.0))
 
     flag[HIT_BARREL] = (d != sphered)
 
@@ -260,7 +260,8 @@ def render(t: ti.f32):
 
 gui = ti.GUI(GUI_TITLE, res=wh)
 def main(output_img=False):
-    for ts in range(1000000):
+    print(time.strftime("%H:%M:%S, ", time.localtime()), end='')
+    for ts in range(1000):
         if gui.get_event(ti.GUI.ESCAPE):
             exit()
 
@@ -270,8 +271,10 @@ def main(output_img=False):
             gui.show(f'frame/{ts:04d}.png')
         else:
             gui.show()
+        if ts == 0:
+            print(time.strftime("%H:%M:%S", time.localtime()))
 
 
 if __name__ == '__main__':
-    # main(img=True)
-    main()
+    main(output_img=True)
+    # main()
