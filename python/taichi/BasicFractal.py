@@ -7,7 +7,7 @@ ti.init(debug=True, arch=ti.cpu)
 # ti.core.toggle_advanced_optimization(False)
 
 "Basic fractal by @paulofalcao"
-GUI_TITLE = "Basic Fractal"
+GUI_TITLE = "Basic Fractal 1.5"
 w, h = wh = (640, 360)
 pixels = ti.Vector(3, dt=ti.f32, shape=wh)
 iResolution = ti.Vector([w, h])
@@ -15,10 +15,10 @@ iResolution = ti.Vector([w, h])
 
 # Convert r, g, b to normalized vec3
 @ti.func
-def rot(uv: ti.Vector, a: ti.f32):
+def rot(uv: ti.Vector, a: ti.f32) -> ti.Vector:
     return ti.Vector([
         uv[0]*ti.cos(a) - uv[1]*ti.sin(a),
-        uv[1]*ti.cos(a) + uv[0]*ti.sin(a)
+        uv[0]*ti.sin(a) + uv[1]*ti.cos(a)
     ])
 
 
@@ -32,21 +32,24 @@ def mainImage(
 
     # a nice value for fullscreen is 8
     maxIterations = 6
-    circleSize = 1.0 / (3.0 * 2.0 ** maxIterations)
+    circleSize = 0.4
+    
+    # normalize stuff
+    # uv: ti.Vector = (fragCoord *1.0 - 0.5 * iResolution) / w
+    uv = ti.Vector([
+        (i - 0.5 * w) / w,
+        (j - 0.5 * h) / w
+    ])
 
-    uv = iResolution * 1.0
-    uv = -0.5 * (uv - 2.0 * fragCoord) / uv[0]
-
-    # global rotation and zoom
-    uv = rot(uv, iTime)
+    # global zoom
     uv *= ti.sin(iTime) * 0.5 + 1.5
 
-    # mirror, rotate and scale 6 times...
-    s = 0.3
+    # shift, mirror, rotate and scale 6 times...
     for _ in range(maxIterations):
-        uv = abs(uv) - s
-        uv = rot(uv, iTime)
-        s = s / 2.1
+        uv *= 2.1           # <- Scale
+        uv  = rot(uv, iTime) # <- Rotate
+        uv  = abs(uv)       # <- Mirror
+        uv -= 0.5           # <- Shift
 
     # draw a circle
     c = 0.0
