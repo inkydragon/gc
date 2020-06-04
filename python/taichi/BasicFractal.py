@@ -1,12 +1,16 @@
 import taichi as ti
 import time
 
-print(time.strftime("%H:%M:%S, ", time.localtime()), end='')
-ti.init(debug=True, arch=ti.cpu)
-# ti.init(arch=ti.gpu)
+# print(time.strftime("%H:%M:%S, ", time.localtime()), end='')
+# ti.init(debug=True, arch=ti.cpu)
+ti.init(arch=ti.gpu)
 # ti.core.toggle_advanced_optimization(False)
 
-"Basic fractal by @paulofalcao"
+"""
+Basic fractal by @paulofalcao
+- [Basic Fractal](https://www.shadertoy.com/view/Mss3Wf)
+- [Basic Fractal Zero](https://www.shadertoy.com/view/tltSWs)
+"""
 GUI_TITLE = "Basic Fractal 1.5"
 w, h = wh = (640, 360)
 pixels = ti.Vector(3, dt=ti.f32, shape=wh)
@@ -82,8 +86,8 @@ def main(output_img=False):
             gui.show(f'frame/{ts:04d}.png')
         else:
             gui.show()
-        if ts == 0:
-            print(time.strftime("%H:%M:%S", time.localtime()))
+        # if ts == 0:
+        #     print(time.strftime("%H:%M:%S", time.localtime()))
 
 
 if __name__ == '__main__':
