@@ -4,9 +4,7 @@ import numpy as np
 # ti.init(debug=True, arch=ti.cpu)
 ti.init(arch=ti.gpu)
 
-# Equi-Angular Sampling
-# https://www.shadertoy.com/view/Xdf3zB
-GUI_TITLE = "Equi-Angular Sampling"
+GUI_TITLE = "curvatic Empire 2"
 h, w = iResolution = (640, 320)
 pixels = ti.Vector(3, dt=ti.f32, shape=iResolution)
 

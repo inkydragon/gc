@@ -1,5 +1,10 @@
+.ipynb_checkpoints/
+.vscode/
 frame/
 
 *.png
 *.mp4
 *.gif
+
+*.ipynb
+*.dat
