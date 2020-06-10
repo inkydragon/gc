@@ -33,9 +33,7 @@ spring_stiffness[None] = 10000
 damping[None] = 20  # 恒定阻尼
 
 
-## 函数定义 =====================
-
-## 速度求解
+## 求解器 =====================================
 @ti.kernel
 def symplectic_euler():
     "半隐式欧拉法"
@@ -57,8 +55,10 @@ def symplectic_euler():
 
 
 ## 隐式欧拉法 --------------
-@ti.func
+@ti.kernel
 def init_M():
+    """初始化质量矩阵 M
+    """
     m = ti.Matrix([
         [PARTICLE_MASS, 0],
         [0, PARTICLE_MASS]
@@ -66,40 +66,89 @@ def init_M():
     for i in range(num_particles[None]):
         M[i, i] = m
 
+
 @ti.kernel
-def implicit_euler_jacobi():
-    """隐式欧拉法 + Jacobi 迭代
-    A = M - dt^2 * J(t)
-    b = M*v(t) + dt * F(t)
-    A * v(t+1) = b
+def update_A():
+    """更新 A
+        A = M - dt^2 * J(t)
+    """
+    omega = 0
+    for i, j in A:
+        # A[i, j] = M[i, j] - omega * dt**2 * J[i, j]
+        A[i, j] = M[i, j]
+
+
+@ti.kernel
+def update_F():
+    """计算 x 的受到的合力
     """
     n = num_particles[None]
     k = spring_stiffness[None]
     m, g = PARTICLE_MASS, GRAVITY
-    init_M()
 
-    # Jacobi 迭代
-    omega = 0
     for i in range(n):
+        F[i] = m * g
+
+    for i, j in rest_length:
+        l_ij = rest_length[i, j]
+        if l_ij != 0:
+            x_ij = x[i] - x[j]
+            F[i] += -k * (x_ij.norm() - l_ij) * x_ij.normalized()
+        else:
+            pass # (i,j) 间无弹簧
+
+    # for i in range(n):
+    #     F[i] = m * g
+    #     for j in range(n):
+    #         l_ij = rest_length[i, j]
+    #         if l_ij != 0:
+    #             x_ij = x[i] - x[j]
+    #             F[i] += -k * (x_ij.norm() - l_ij) * x_ij.normalized()
+
+
+@ti.kernel
+def update_b():
+    """更新 b
+        b = M*v_star + dt * F(t)
+        v_star = v(t) + dt * a(t)
+
+    `a(t)` 其他力导致的加速度。如：damping、相对速度
+    """
+    m = PARTICLE_MASS
+    for i in range(num_particles[None]):
         v_star = v[i] * ti.exp(-dt * damping[None])
-        # v[i] *= ti.exp(-dt * damping[None])
-        f = m * g
-        for j in range(n):
-            l_ij = rest_length[i, j]
-            if l_ij != 0:  # 两质点间有弹簧连接
-                x_ij = x[i] - x[j]
-                f += -k * (x_ij.norm() - l_ij) * x_ij.normalized()
-        
-        b_i = m * v_star + dt * f
+        b[i] = A[i, i] @ v_star + dt * F[i]
+
+
+@ti.kernel
+def jacobi():
+    """Jacobi 迭代
+        A = M - dt^2 * J(t)
+        b = M * v(t) + dt * F(t)
+        A * v(t+1) = b
+    """
+    n = num_particles[None]
+    for i in range(n):
         for j in range(n):
             if i != j:
                 ## Ax = b
                 # M * v(t+1) == M * v_star(t) + dt * f(t)
-                b_i -= M[i,j] @ v[j]
+                b[i] -= A[i, j] @ v[j]
 
-        v[i] = b_i / m
+        v[i] = A[i, i].inverse() @ b[i]
 
 
+def implicit_euler():
+    """隐式欧拉法 + Jacobi 迭代
+    """
+    init_M()
+    update_A()
+    update_F()
+    update_b()
+    jacobi()
+
+
+## 通用步骤 ====================================
 @ti.kernel
 def collide():
     """与地面碰撞"""
@@ -112,15 +161,16 @@ def collide():
 @ti.kernel
 def update_position():
     """更新位置
-    `x(t+1) = x(t) + dt*v(t+1)`
+        x(t+1) = x(t) + dt * v(t+1)
     """
     for i in range(num_particles[None]):
         x[i] += v[i] * dt
 
 
 def substep():
+    "一个时间步长"
     # symplectic_euler()
-    implicit_euler_jacobi()
+    implicit_euler()
     collide()
     update_position()
 
@@ -141,8 +191,7 @@ def add_particle(pos_x: ti.f32, pos_y: ti.f32):
             rest_length[new_particle_id, i] = 0.1
 
 
-## GUI ====
-    
+## GUI =====================================
 gui = ti.GUI('Mass Spring System', res=(512, 512), background_color=0xdddddd)
 
 add_particle(0.3, 0.3)
