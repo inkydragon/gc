@@ -1,39 +1,37 @@
 import taichi as ti
 
-ti.init(debug=True, arch=ti.cpu)
-# ti.init(arch=ti.gpu)
+# ti.init(debug=True, arch=ti.cpu)
+ti.init(arch=ti.gpu)
 
 ## 系统参数 ===============================
 MAX_NUM_PARTICLES   = 256   # 最多质点数
 PARTICLE_MASS       = 1     # 质点质量
 BOTTOM_Y            = 0.05  # 地面位置
 CONNECTION_RADIUS   = 0.15  # 质点自动连接半径
+GRAVITY = ti.Vector([0, -9.8], dt=ti.f32) # 重力场
 dt = 1e-3                   # 时间步长
 
 num_particles       = ti.var(ti.i32, shape=())  # 现有质点数
 spring_stiffness    = ti.var(ti.f32, shape=())  # 弹簧刚度
-paused              = ti.var(ti.i32, shape=())  # 暂停？
+paused              = ti.var(ti.i32, shape=())  # 暂停
 damping             = ti.var(ti.f32, shape=())  # 阻尼
 # rest_length[i, j] = 0 则 i,j 未连接
 rest_length = ti.var(ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
 
 x = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES) # 位置
 v = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES) # 速度
-# Av = b
-A = ti.Matrix(2, 2, dt=ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
-M = ti.Matrix(2, 2, dt=ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
-b = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES)
-new_v = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES)
-F = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES)
-J = ti.Matrix(2, 2, dt=ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
-GRAVITY = ti.Vector([0, -9.8], dt=ti.f32) # 重力场
 
+M = ti.Matrix(2, 2, dt=ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
+J = ti.Matrix(2, 2, dt=ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
+A = ti.Matrix(2, 2, dt=ti.f32, shape=(MAX_NUM_PARTICLES, MAX_NUM_PARTICLES))
+F = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES)
+b = ti.Vector(2, dt=ti.f32, shape=MAX_NUM_PARTICLES)
 
 spring_stiffness[None] = 10000
 damping[None] = 20  # 恒定阻尼
 
 
-## 求解器 =====================================
+## 速度求解器 =====================================
 @ti.kernel
 def symplectic_euler():
     "半隐式欧拉法"
@@ -69,7 +67,9 @@ def init_M():
 
 @ti.kernel
 def update_J():
-    "更新 jacobi 矩阵"
+    """更新 jacobi 矩阵
+    - [Miles Macklin](https://blog.mmacklin.com/2012/05/04/implicitsprings/)
+    """
     I = ti.Matrix([
         [1.0, 0.0],
         [0.0, 1.0]
@@ -90,30 +90,26 @@ def update_J():
                     J[i, d] *=  1.0
                 else: # d==j
                     J[i, d] *= -1.0
-                # x_ji = x[j] - x[i]  # 这里反向了
-                # J[i, d] += -k * ( I - l_ij/x_ji.norm() * (I - x_ji.outer_product(x_ji) / (x_ji.norm()**2)))
 
 
 @ti.kernel
-def update_A():
+def update_A(beta: ti.f32):
     """更新 A
         A = M - dt^2 * J(t)
     """
-    beta = 0.5
+    # beta = 0.5
     for i, j in A:
         A[i, j] = M[i, j] - beta * dt**2 * J[i, j]
-        # A[i, j] = M[i, j]
 
 
 @ti.kernel
 def update_F():
     """计算 x 的受到的合力
     """
-    n = num_particles[None]
     k = spring_stiffness[None]
     m, g = PARTICLE_MASS, GRAVITY
 
-    for i in range(n):
+    for i in range(num_particles[None]):
         F[i] = m * g
 
     for i, j in rest_length:
@@ -121,27 +117,19 @@ def update_F():
         if l_ij != 0:
             x_ij = x[i] - x[j]
             F[i] += -k * (x_ij.norm() - l_ij) * x_ij.normalized()
-        else:
-            pass # (i,j) 间无弹簧
-
-    # for i in range(n):
-    #     F[i] = m * g
-    #     for j in range(n):
-    #         l_ij = rest_length[i, j]
-    #         if l_ij != 0:
-    #             x_ij = x[i] - x[j]
-    #             F[i] += -k * (x_ij.norm() - l_ij) * x_ij.normalized()
+        else:  # l_ij == 0
+            pass # i,j 间无弹簧
 
 
 @ti.kernel
 def update_b():
     """更新 b
+
         b = M*v_star + dt * F(t)
         v_star = v(t) + dt * a(t)
 
     `a(t)` 其他力导致的加速度。如：damping、相对速度
     """
-    m = PARTICLE_MASS
     for i in range(num_particles[None]):
         v_star = v[i] * ti.exp(-dt * damping[None])
         b[i] = A[i, i] @ v_star + dt * F[i]
@@ -150,6 +138,7 @@ def update_b():
 @ti.kernel
 def jacobi():
     """Jacobi 迭代
+
         A = M - dt^2 * J(t)
         b = M * v(t) + dt * F(t)
         A * v(t+1) = b
@@ -158,20 +147,24 @@ def jacobi():
     for i in range(n):
         for j in range(n):
             if i != j:
-                ## Ax = b
-                # M * v(t+1) == M * v_star(t) + dt * f(t)
                 b[i] -= A[i, j] @ v[j]
 
         v[i] = A[i, i].inverse() @ b[i]
 
 
-def implicit_euler():
+def implicit_euler(beta=0.5):
     """隐式欧拉法 + Jacobi 迭代
 
-        A = M - dt^2 * J(t)
+        A = M - beta * dt^2 * J(t)
         b = M*v(t) + dt * F(t)
         A * v(t+1) = b
 
+    ### beta
+        = 0.0: forward/semi-implicit Euler (explicit)
+        = 0.5: middle-point (implicit)
+        = 1.0: backward Euler (implicit)
+
+    ### step
     0. 初始化 M
     1. 更新 J(t)
     2. 更新 A
@@ -181,7 +174,7 @@ def implicit_euler():
     """
     init_M()
     update_J()
-    update_A()
+    update_A(beta)
     update_F()
     update_b()
     jacobi()
@@ -208,8 +201,8 @@ def update_position():
 
 def substep():
     "一个时间步长"
-    # symplectic_euler()
-    implicit_euler()
+    # symplectic_euler() # 半隐式欧拉法
+    implicit_euler(1.0)    # 隐式欧拉法/后向欧拉法
     collide()
     update_position()
 
@@ -245,15 +238,15 @@ while True:
             paused[None] = not paused[None]
         elif e.key == ti.GUI.LMB:
             add_particle(e.pos[0], e.pos[1])
-        elif e.key == 'C':
+        elif e.key == 'c':
             num_particles[None] = 0
             rest_length.fill(0)
-        elif e.key == 'S':
+        elif e.key == 's':
             if gui.is_pressed('Shift'):
                 spring_stiffness[None] /= 1.1
             else:
                 spring_stiffness[None] *= 1.1
-        elif e.key == 'D':
+        elif e.key == 'd':
             if gui.is_pressed('Shift'):
                 damping[None] /= 1.1
             else:
