@@ -68,14 +68,41 @@ def init_M():
 
 
 @ti.kernel
+def update_J():
+    "更新 jacobi 矩阵"
+    I = ti.Matrix([
+        [1.0, 0.0],
+        [0.0, 1.0]
+    ])
+    k = spring_stiffness[None]
+    for i, d in J:  # 遍历 J
+        # i 为观察的质点
+        # d 为求导数的方向 x_d
+        for j in range(num_particles[None]):  # 遍历所有点
+            l_ij = rest_length[i, j] # 对于弹簧 i <-- j
+            if (l_ij != 0) and (d == i or d == j):
+                # i,j 间有弹簧链接 && 求导方向 d 为 i 或 j
+                x_ij = x[i] - x[j]
+                X_ij_bar = x_ij / x_ij.norm()
+                mat = X_ij_bar.outer_product(X_ij_bar)
+                J[i, d] += -k * (I - l_ij/x_ij.norm() * (I - mat))
+                if d==i:
+                    J[i, d] *=  1.0
+                else: # d==j
+                    J[i, d] *= -1.0
+                # x_ji = x[j] - x[i]  # 这里反向了
+                # J[i, d] += -k * ( I - l_ij/x_ji.norm() * (I - x_ji.outer_product(x_ji) / (x_ji.norm()**2)))
+
+
+@ti.kernel
 def update_A():
     """更新 A
         A = M - dt^2 * J(t)
     """
-    omega = 0
+    beta = 0.5
     for i, j in A:
-        # A[i, j] = M[i, j] - omega * dt**2 * J[i, j]
-        A[i, j] = M[i, j]
+        A[i, j] = M[i, j] - beta * dt**2 * J[i, j]
+        # A[i, j] = M[i, j]
 
 
 @ti.kernel
@@ -140,8 +167,20 @@ def jacobi():
 
 def implicit_euler():
     """隐式欧拉法 + Jacobi 迭代
+
+        A = M - dt^2 * J(t)
+        b = M*v(t) + dt * F(t)
+        A * v(t+1) = b
+
+    0. 初始化 M
+    1. 更新 J(t)
+    2. 更新 A
+    3. 更新 F(t)
+    4. 更新 b
+    5. 求解 v(t+1)
     """
     init_M()
+    update_J()
     update_A()
     update_F()
     update_b()
