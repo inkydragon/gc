@@ -35,7 +35,7 @@ Broadcast.broadcastable(p::Params) = Ref(p)
 
 struct TmpVar{T}
     re :: Arr3{T}
-    cm :: cmA3{T}
+    fft :: cmA3{T}
     cu :: cuA3{T}
 
     TmpVar(arr::Arr3{T}) where {T <: Real} =
@@ -139,6 +139,7 @@ help_kernel1(η1::T, η2::T,
     (6 * p.σ_gb/p.l_gb * (η1^3 - η1 + 3*η1*η2^2) - 
      2 * η1 * η2^2 / sumetasqu^2 * f_def_force)
 
+"仅修改 tmp，其余变量不变"
 help_kernel1!(tmp::cmA3{T},
     η1::Arr3{T}, η2::Arr3{T},
     sumetasqu::Arr3{T}, f_def_force::Arr3{T},
@@ -149,41 +150,52 @@ help_kernel1!(tmp::cmA3{T},
 help_kernel2(tmp::T, cη1::T, cη2::T, k2::Real, p::Params) where {T <: Complex} =
     cη1 + p.δt * (-p.M * p.σ_gb * k2 * cη2 + tmp)
 
-help_kernel2!(tmp::Arr3{T},
-    cη1::Arr3{T}, cη2::Arr3{T},
+"仅修改 cη1，其余变量不变"
+help_kernel2!(cη1::cmA3{T}, 
+    cη2::cmA3{T}, tmp::cmA3{T},
     p::Params,
-) where {T<:Complex, N} =
-    @. tmp = help_kernel2(tmp, cη1, cη2, p.k2, p)
+) where {T<:Real} =
+    @. cη1 = help_kernel2(tmp, cη1, cη2, p.k2, p)
 
 "复制 src 的实数部分到 des"
-copyre!(des::Arr3{T}, src::cmA3{T}) where {T<:Real, N} =
+copyre!(des::Arr3{T}, src::cmA3{T}) where {T<:Real} =
     map!(real, des, src)
+clearim!(arr::cmA3{T}) where {T<:Real} =
+    @. arr = complex(real(arr))
 
-function help_kernel0!(
+"更新 η1，tmp 用作临时变量"
+function help_kernel0!(::cmA3{T},
         η1::TmpVar{T}, η2::TmpVar{T},
-        tmp::cmA3{T},
         v::Var{T}, p::Params{T},
     ) where {T<:Real}
-    # 计算 tmp
-    help_kernel1!(tmp, η1.re, η2.re, v.sumetasqu.re, v.f_def_force.re, p)
-    fft!(tmp)
+    # 先计算 fft 的参数，存放在 tmp.fft。然后计算 fft
+    help_kernel1!(v.tmp.fft, η1.re, η2.re, v.sumetasqu.re, v.f_def_force.re, p)
+    fft!(v.tmp.fft)
 
-    # 计算 cη1 和 cη2 的 fft 
-    fft!(η1.cm)
-    fft!(η2.cm)
-
-    # 计算 ifft, 复制实数部分到 η1, η2
-    help_kernel2!(tmp, η1.cm, η2.cm, p)
-    ifft!(tmp)
-    copyre!(η1.re, η1.cm)
-    copyre!(η2.re, η2.cm)
+    # 先计算函数参数，存放在 η1.fft 中
+    # 然后计算 ifft
+    # 最后将 η1.fft 实部复制到 η1.re
+    # 此时使用
+    help_kernel2!(η1.fft, η2.fft, v.tmp.fft, p)
+    ifft!(η1.fft)
+    copyre!(η1.re, η1.fft) # 保证 fft/re 实部相同
+    clearim!(η1.fft)
 end
 
 "for 循环中的主体函数"
-function main_kernel!(v::Var, p::Params)
-    help_kernel0!(v.rex, v.def, v.tmp.cm, v, p)
-    help_kernel0!(v.def, v.rex, v.tmp.cm,v, p)
+function main_kernel!(v::Var, p::Params, i::Int64)
+    # 函数假定此时 rex.fft 与 rex.re 数值相同，仅类型不同
+    # @assert v.rex.fft==complex(v.rex.re) "[$i] rex.fft!=complex(rex.re)"
+    # @assert v.def.fft==complex(v.def.re) "[$i] rex.fft!=complex(rex.re)"
+    # 更新 rex/def.fft
+    fft!(v.rex.fft)
+    fft!(v.def.fft)
 
+    # 分别更新 rex/def
+    help_kernel0!(v.tmp.fft, v.rex, v.def, v, p)
+    help_kernel0!(v.tmp.fft, v.def, v.rex, v, p)
+
+    # 更新 sumetasqu/f_def_force
     @. v.sumetasqu.re = v.rex.re^2 + v.def.re^2
     @. v.f_def_force.re = p.f_def * (v.def.re^2 / v.sumetasqu.re)
 end
@@ -193,7 +205,7 @@ function main(iter_times = 100, dim = (512, 512, 1))
     v, p = init_params(iter_times, dim)
 
     for i in 1:p.iter_times
-        main_kernel!(v, p)
+        main_kernel!(v, p, i)
     end
 
     v
