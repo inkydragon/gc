@@ -30,7 +30,7 @@ struct Params
     k2 :: Array{Float64,3}
     f_def :: Array{Float64,3}
 end
-
+Broadcast.broadcastable(p::Params) = Ref(p)
 
 function f_def_field(itype, dim, δx)
     nx, ny, nz = dim
@@ -97,21 +97,29 @@ end
 
 
 #= 主要的计算函数 =#
+help_kernel1(η1::T, η2::T, 
+    sumetasqu::T, f_def_force::T, 
+    p::Params
+) where {T <: Real} =
+    -4/3 * p.M / p.l_gb * 
+    (6 * p.σ_gb/p.l_gb * (η1^3 - η1 + 3*η1*η2^2) - 
+     2 * η1 * η2^2 / sumetasqu^2 * f_def_force)
 
 help_kernel1!(tmp::Array{T2, N},
     η1::Array{T1, N}, η2::Array{T1, N},
     sumetasqu::Array{T1, N}, f_def_force::Array{T1, N},
     p::Params,
 ) where {T1<:Real, T2<:Complex, N} =
-    @. tmp = -4/3 * p.M / p.l_gb * 
-             (6 * p.σ_gb/p.l_gb * (η1^3 - η1 + 3*η1*η2^2) - 
-              2 * η1 * η2^2 / sumetasqu^2 * f_def_force)
+    @. tmp = help_kernel1(η1, η2, sumetasqu, f_def_force, p)
+
+help_kernel2(tmp::T, cη1::T, cη2::T, k2::Real, p::Params) where {T <: Complex} =
+    cη1 + p.δt * (-p.M * p.σ_gb * k2 * cη2 + tmp)
 
 help_kernel2!(tmp::Array{T, N},
     cη1::Array{T, N}, cη2::Array{T, N},
     p::Params,
 ) where {T<:Complex, N} =
-    @. tmp = cη1 + p.δt * (-p.M * p.σ_gb * p.k2 * cη2 + tmp)
+    @. tmp = help_kernel2(tmp, cη1, cη2, p.k2, p)
 
 "复制 src 的实数部分到 des"
 copyre!(des::Array{T, N}, src::Array{Complex{T}, N}) where {T<:Real, N} =
