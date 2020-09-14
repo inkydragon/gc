@@ -33,35 +33,35 @@ struct Params{T}
 end
 Broadcast.broadcastable(p::Params) = Ref(p)
 
+struct TmpVar{T}
+    re :: Arr3{T}
+    cm :: cmA3{T}
+    cu :: cuA3{T}
+
+    TmpVar(arr::Arr3{T}) where {T <: Real} =
+        new{T}(arr, complex(arr), CuArray{Complex{T}}(arr))
+end
+
 """存放变量
 
 使用 SoA (Struct of Array)
 """
 struct Var{T}
-    η_rex   :: Arr3{T}
-    cη_rex  :: cmA3{T}
-    cuη_rex :: cuA3{T}
+    rex   :: TmpVar{T}
+    def   :: TmpVar{T}
+    tmp   :: TmpVar{T}
 
-    η_def   :: Arr3{T}
-    cη_def  :: cmA3{T}
-    cuη_def :: cuA3{T}
-
-    tmp     :: cmA3{T}
-    cu_tmp  :: cuA3{T}
-
-    sumetasqu   :: Arr3{T}
-    f_def_force :: Arr3{T}
+    sumetasqu   :: TmpVar{T}
+    f_def_force :: TmpVar{T}
 
     function Var(
             η_rex::Arr3{T}, η_def::Arr3{T}, 
             sumetasqu::Arr3{T}, f_def_force::Arr3{T}
         ) where {T <: Real}
-        dim = size(η_rex)
         new{T}(
-            η_rex, complex(η_rex), CuArray{Complex{T}}(η_rex),
-            η_def, complex(η_def), CuArray{Complex{T}}(η_def),
-            zeros(Complex{T}, dim), CUDA.zeros(Complex{T}, dim),
-            sumetasqu, f_def_force
+            TmpVar(η_rex), TmpVar(η_def),
+            TmpVar(similar(η_rex)),
+            TmpVar(sumetasqu), TmpVar(f_def_force)
         )
     end
 end
@@ -160,33 +160,32 @@ copyre!(des::Arr3{T}, src::cmA3{T}) where {T<:Real, N} =
     map!(real, des, src)
 
 function help_kernel0!(
-        η1::Arr3{T}, cη1::cmA3{T},
-        η2::Arr3{T}, cη2::cmA3{T},
-        v::Var{T},
-        p::Params{T},
+        η1::TmpVar{T}, η2::TmpVar{T},
+        tmp::cmA3{T},
+        v::Var{T}, p::Params{T},
     ) where {T<:Real}
     # 计算 tmp
-    help_kernel1!(v.tmp, η1, η2, v.sumetasqu, v.f_def_force, p)
-    fft!(v.tmp)
+    help_kernel1!(tmp, η1.re, η2.re, v.sumetasqu.re, v.f_def_force.re, p)
+    fft!(tmp)
 
     # 计算 cη1 和 cη2 的 fft 
-    fft!(cη1)
-    fft!(cη2)
+    fft!(η1.cm)
+    fft!(η2.cm)
 
     # 计算 ifft, 复制实数部分到 η1, η2
-    help_kernel2!(v.tmp, cη1, cη2, p)
-    ifft!(v.tmp)
-    copyre!(η1, cη1)
-    copyre!(η2, cη2)
+    help_kernel2!(tmp, η1.cm, η2.cm, p)
+    ifft!(tmp)
+    copyre!(η1.re, η1.cm)
+    copyre!(η2.re, η2.cm)
 end
 
 "for 循环中的主体函数"
 function main_kernel!(v::Var, p::Params)
-    help_kernel0!(v.η_rex, v.cη_rex, v.η_def, v.cη_def, v, p)
-    help_kernel0!(v.η_def, v.cη_def, v.η_rex, v.cη_rex, v, p)
+    help_kernel0!(v.rex, v.def, v.tmp.cm, v, p)
+    help_kernel0!(v.def, v.rex, v.tmp.cm,v, p)
 
-    @. v.sumetasqu = v.η_rex^2 + v.η_def^2
-    @. v.f_def_force = p.f_def * (v.η_def^2 / v.sumetasqu)
+    @. v.sumetasqu.re = v.rex.re^2 + v.def.re^2
+    @. v.f_def_force.re = p.f_def * (v.def.re^2 / v.sumetasqu.re)
 end
 
 "主函数"
