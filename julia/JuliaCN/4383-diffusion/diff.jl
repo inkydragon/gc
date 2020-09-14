@@ -3,6 +3,8 @@ using FFTW
 using CUDA
 using BenchmarkTools
 
+const USE_CUDA = true
+
 const Arr3{T} = Array{T, 3}
 const cmA3{T} = Array{Complex{T}, 3}
 const cuA3{T} = CuArray{Complex{T}, 3}
@@ -182,18 +184,52 @@ function help_kernel0!(::cmA3{T},
     clearim!(η1.fft)
 end
 
+function help_kernel0!(::cuA3{T},
+        η1::TmpVar{T}, η2::TmpVar{T},
+        v::Var{T}, p::Params{T},
+    ) where {T<:Real}
+    # 先计算 fft 的参数，存放在 tmp.fft。然后计算 fft
+    help_kernel1!(v.tmp.fft, η1.re, η2.re, v.sumetasqu.re, v.f_def_force.re, p)
+    copyto!(v.tmp.cu, v.tmp.fft)
+    fft!(v.tmp.cu)
+    copyto!(v.tmp.fft, v.tmp.cu)
+
+    # 先计算函数参数，存放在 η1.fft 中
+    # 然后计算 ifft
+    # 最后将 η1.fft 实部复制到 η1.re
+    # 此时使用
+    help_kernel2!(η1.fft, η2.fft, v.tmp.fft, p)
+    copyto!(η1.cu, η1.fft)
+    ifft!(η1.cu)
+    copyto!(η1.fft, η1.cu)
+    copyre!(η1.re, η1.fft) # 保证 fft/re 实部相同
+    clearim!(η1.fft)
+    copyto!(η1.cu, η1.fft)
+end
+
 "for 循环中的主体函数"
 function main_kernel!(v::Var, p::Params, i::Int64)
-    # 函数假定此时 rex.fft 与 rex.re 数值相同，仅类型不同
-    # @assert v.rex.fft==complex(v.rex.re) "[$i] rex.fft!=complex(rex.re)"
-    # @assert v.def.fft==complex(v.def.re) "[$i] rex.fft!=complex(rex.re)"
     # 更新 rex/def.fft
-    fft!(v.rex.fft)
-    fft!(v.def.fft)
-
-    # 分别更新 rex/def
-    help_kernel0!(v.tmp.fft, v.rex, v.def, v, p)
-    help_kernel0!(v.tmp.fft, v.def, v.rex, v, p)
+    @static if USE_CUDA
+        fft!(v.rex.cu)
+        fft!(v.def.cu)
+        copyto!(v.rex.fft, v.rex.cu)
+        copyto!(v.def.fft, v.def.cu)
+    
+        # 分别更新 rex/def
+        help_kernel0!(v.tmp.cu, v.rex, v.def, v, p)
+        help_kernel0!(v.tmp.cu, v.def, v.rex, v, p)
+    else
+        # 函数假定此时 rex.fft 与 rex.re 数值相同，仅类型不同
+        # @assert v.rex.fft==complex(v.rex.re) "[$i] rex.fft!=complex(rex.re)"
+        # @assert v.def.fft==complex(v.def.re) "[$i] rex.fft!=complex(rex.re)"
+        fft!(v.rex.fft)
+        fft!(v.def.fft)
+    
+        # 分别更新 rex/def
+        help_kernel0!(v.tmp.fft, v.rex, v.def, v, p)
+        help_kernel0!(v.tmp.fft, v.def, v.rex, v, p)
+    end
 
     # 更新 sumetasqu/f_def_force
     @. v.sumetasqu.re = v.rex.re^2 + v.def.re^2
