@@ -1,5 +1,6 @@
 using VectorizedRoutines
 using FFTW
+using CUDA
 using BenchmarkTools
 
 
@@ -31,6 +32,39 @@ struct Params
     f_def :: Array{Float64,3}
 end
 Broadcast.broadcastable(p::Params) = Ref(p)
+
+"""存放变量
+
+使用 SoA (Struct of Array)
+"""
+struct Var{T, N}
+    η_rex   :: Array{T, N}
+    cη_rex  :: Array{Complex{T}, N}
+    cuη_rex :: CuArray{Complex{T}, N}
+
+    η_def   :: Array{T, N}
+    cη_def  :: Array{Complex{T}, N}
+    cuη_def :: CuArray{Complex{T}, N}
+
+    tmp     :: Array{Complex{T}, N}
+    cu_tmp  :: CuArray{Complex{T}, N}
+
+    sumetasqu   :: Array{T, N}
+    f_def_force :: Array{T, N}
+
+    function Var(
+            η_rex::Array{T, N}, η_def::Array{T, N}, 
+            sumetasqu::Array{T, N}, f_def_force::Array{T, N}
+        ) where {T <: Real, N}
+        dim = size(η_rex)
+        new{T, N}(
+            η_rex, complex(η_rex), CuArray{Complex{T}}(η_rex),
+            η_def, complex(η_def), CuArray{Complex{T}}(η_def),
+            zeros(Complex{T}, dim), CUDA.zeros(Complex{T}, dim),
+            sumetasqu, f_def_force
+        )
+    end
+end
 
 function f_def_field(itype, dim, δx)
     nx, ny, nz = dim
@@ -89,7 +123,7 @@ function init_params(iter_times = 100, dim = (512, 512, 1))
     k2 = @. g1^2 + g2^2 + g3^2
 
     (
-        η_rex, η_def, sumetasqu, f_def_force,
+        Var(η_rex, η_def, sumetasqu, f_def_force),
         Params(iter_times, dim, M, v_gb, δx,δt, l_gb,σ_gb, k2, f_def)
     )
 end
@@ -125,51 +159,45 @@ help_kernel2!(tmp::Array{T, N},
 copyre!(des::Array{T, N}, src::Array{Complex{T}, N}) where {T<:Real, N} =
     map!(real, des, src)
 
-function help_kernel0!(tmp::Array{T2, N},
+function help_kernel0!(
         η1::Array{T1, N}, cη1::Array{T2, N},
         η2::Array{T1, N}, cη2::Array{T2, N},
-        sumetasqu::Array{T1, N}, 
-        f_def_force::Array{T1, N},
+        v::Var,
         p :: Params,
     ) where {T1<:Real, T2<:Complex, N}
     # 计算 tmp
-    help_kernel1!(tmp, η1, η2, sumetasqu, f_def_force, p)
-    fft!(tmp)
+    help_kernel1!(v.tmp, η1, η2, v.sumetasqu, v.f_def_force, p)
+    fft!(v.tmp)
 
     # 计算 cη1 和 cη2 的 fft 
     fft!(cη1)
     fft!(cη2)
 
     # 计算 ifft, 复制实数部分到 η1, η2
-    help_kernel2!(tmp, cη1, cη2, p)
-    ifft!(tmp)
+    help_kernel2!(v.tmp, cη1, cη2, p)
+    ifft!(v.tmp)
     copyre!(η1, cη1)
     copyre!(η2, cη2)
 end
 
 "for 循环中的主体函数"
-function main_kernel!(tmp::Array{T2, N},
-        η_rex::Array{T1, N}, cη_rex::Array{T2, N},
-        η_def::Array{T1, N}, cη_def::Array{T2, N},
-        sumetasqu::Array{T1, N}, f_def_force::Array{T1, N},
-        p :: Params,
-    ) where {T1<:Real, T2<:Complex, N}
-    help_kernel0!(tmp, η_rex, cη_rex, η_def, cη_def, sumetasqu, f_def_force, p)
-    help_kernel0!(tmp, η_def, cη_def, η_rex, cη_rex, sumetasqu, f_def_force, p)
+function main_kernel!(v::Var, p::Params)
+    help_kernel0!(v.η_rex, v.cη_rex, v.η_def, v.cη_def, v, p)
+    help_kernel0!(v.η_def, v.cη_def, v.η_rex, v.cη_rex, v, p)
 
-    @. sumetasqu = η_rex^2 + η_def^2
-    @. f_def_force = p.f_def * (η_def^2 / sumetasqu)
+    @. v.sumetasqu = v.η_rex^2 + v.η_def^2
+    @. v.f_def_force = p.f_def * (v.η_def^2 / v.sumetasqu)
 end
 
 "主函数"
 function main(iter_times = 100, dim = (512, 512, 1))
-    η_rex, η_def, sumetasqu, f_def_force, p = init_params(iter_times, dim)
-    cη_rex, cη_def = complex.([η_rex, η_def])
-    tmp = similar(cη_rex)
+    v, p = init_params(iter_times, dim)
+
     for i in 1:p.iter_times
-        main_kernel!(tmp, η_rex, cη_rex, η_def, cη_def, sumetasqu, f_def_force, p)
+        main_kernel!(v, p)
     end
-    η_rex, η_def, sumetasqu, f_def_force
+
+    v
 end
 
 # 运行主函数
