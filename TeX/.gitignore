@@ -1,0 +1,4 @@
+# latex
+*.log
+*.dvi
+*.pdf
