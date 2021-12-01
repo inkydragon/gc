@@ -1,0 +1,5 @@
+ /* MAKE V AN IDENTITY MATRIX */
+       V = 0.0;
+       DO I = 1 TO N;
+          V(I,I) = 1.0;
+       END;
