@@ -1,0 +1,10 @@
+# Adobe AI
+*.ai
+*.psd
+
+# img
+*.jpg
+*.jpeg
+*.png
+*.svg
+!*-git.svg
