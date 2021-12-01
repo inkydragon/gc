@@ -1,0 +1,26 @@
+clear;
+
+b = 0.25;  %%% b=lambda
+U(10,10);
+
+for j=1:1:11
+    U(j,1) = sin(pi*0.1*(j-1))*100;
+end
+
+%%%  define A
+for i = 1:1:9
+    A(i,i) = 1+2*b;
+    A(i,i+1) = -b;
+end
+for i=2:1:9
+    A(i-1,i) = -b
+end
+
+%%% define initial value
+for i=2:1:10
+    u(i-1,1) = U(i,1)
+end
+
+for m = 1:6
+    u(:, m)'
+end

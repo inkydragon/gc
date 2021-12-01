@@ -1,0 +1,4 @@
+# Auto detect text files and perform LF normalization
+*.m     text  working-tree-encoding=GB2312  git-encoding=UTF-8  eol=CRLF
+
+* text=auto
