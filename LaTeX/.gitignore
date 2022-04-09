@@ -8,6 +8,9 @@
 *.synctex*
 *.pdf
 
+# xelatex
+*.xdv
+
 # latexmk
 *.*_latexmk
 *.fls

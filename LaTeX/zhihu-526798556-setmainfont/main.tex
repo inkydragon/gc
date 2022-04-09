@@ -1,0 +1,53 @@
+
+\documentclass{article}
+% \usepackage{dtk-logos} % for TeX logos
+\usepackage{fontspec}
+
+% 更纱黑体： Sarasa Gothic SC       sarasa-gothic-sc-regular.ttf 
+% 思源黑体： Source Han Sans CN     ourceHanSansCN-Normal.otf 
+% 微软雅黑： Microsoft YaHei        msyhl.ttc 
+% \setmainfont{Sarasa Gothic SC}
+% \setmainfont{Source Han Sans CN}
+% \setmainfont{Microsoft YaHei}
+
+%% Mono
+% NotoSansMonoCJKsc-Regular.otf: Noto Sans Mono CJK SC
+% JuliaMono-Regular.ttf: JuliaMono
+% \setmainfont{Noto Sans Mono CJK SC}
+% \setmainfont{JuliaMono}
+
+%% Serif
+% times.ttf: Times New Roman
+% cour.ttf: Courier New
+% \setmainfont{times.ttf}
+\setmainfont{cour.ttf}
+
+
+\begin{document}
+
+% 字体名称
+{\LARGE Courier New }
+
+%% 测试文本出自 fontspec 的手册
+% https://github.com/wspr/fontspec/blob/master/fontspec-doc-fontsel.tex#L83-L131
+\subsection{By font name}
+Fonts known to Lua\TeX\ or Xe\TeX\ may be loaded by their standard names as
+you'd speak them out loud, such as \emph{Times New Roman} or
+\emph{Adobe Garamond}.
+`Known to' in this case generally means `exists in a standard fonts location'
+such as \verb|~/Library/Fonts| on MacOSX, or \verb|C:\Windows\Fonts| on Windows.
+In Lua\TeX, fonts found in the \textsc{texmf} tree can also be loaded by name.
+In Xe\TeX, fonts found in the \textsc{texmf} tree can be loaded in Windows and Linux,
+but not on MacOSX.
+
+
+\subsection{By file name}
+Xe\TeX\ and Lua\TeX\ also allow fonts to be loaded by file name instead of font name.
+When you have a very large collection of fonts, you will sometimes not
+wish to have them all installed in your system's font directories.
+In this case, it is more convenient to load them from a different location on your disk.
+This technique is also necessary in Xe\TeX\ when loading OpenType fonts that are present within your \TeX\ distribution, such as \verb|/usr/local/texlive/2013/texmf-dist/fonts/opentype/public|.
+Fonts in such locations are visible to Xe\TeX\ but cannot be loaded by font name, only file name; Lua\TeX\ does not have this restriction.
+
+
+\end{document}
