@@ -1,0 +1,4 @@
+name = "Parserc"
+uuid = "928f7670-303b-11e9-0c65-c7e429bbbb8c"
+authors = ["thautwarm <twshere@outlook.com>"]
+version = "0.1.0"
