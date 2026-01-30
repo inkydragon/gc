@@ -1,0 +1,6 @@
+# exe
+*.exe
+*.obj
+
+# Sourcetrail files
+*.srctrl*
