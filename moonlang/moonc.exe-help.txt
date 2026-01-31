@@ -1,0 +1,63 @@
+MoonLang Native Compiler v1.0.0
+Copyright (c) 2026 greenteng.com. All rights reserved.
+
+Compile .moon scripts to native executables or shared libraries
+
+Usage: moonc <input.moon> [options]
+
+Options:
+  -o <file>             Output file name
+  -r, --run             Run without generating file (compile, run, delete)
+  --shared              Build shared library (DLL/SO) instead of executable
+  --header <file>       Generate C header file for exported functions
+
+Embedded/Target options:
+  --target <type>       Build target: native (default), embedded, mcu
+  --no-gui              Disable GUI support
+  --no-network          Disable network support
+  --no-dll              Disable DLL/dynamic library support
+  --no-regex            Disable regular expression support
+  --no-json             Disable JSON support
+  --no-float            Disable floating-point support (MCU mode)
+  --heap-size <bytes>   Set heap size for embedded targets
+  --static-alloc        Use static memory allocation (no malloc)
+
+Cross-compilation options:
+  --arch <triple>       Target architecture triple or alias
+  --cpu <name>          Target CPU (e.g., cortex-m4)
+  --features <list>     Target features (e.g., +soft-float)
+
+Architecture aliases:
+  arm-cortex-m          ARM Cortex-M (thumbv7em-none-eabi)
+  arm-cortex-a          ARM Cortex-A (armv7-unknown-linux-gnueabihf)
+  aarch64               ARM 64-bit (aarch64-unknown-linux-gnu)
+  riscv32               RISC-V 32-bit (riscv32-unknown-elf)
+  riscv64               RISC-V 64-bit (riscv64-unknown-linux-gnu)
+  esp32                 ESP32 Xtensa (xtensa-esp32-elf)
+
+Windows-only options:
+  --icon <file>         Icon file for the executable (.ico)
+  --company <name>      Company name in version info
+  --copyright <text>    Copyright notice in version info
+  --description <text>  File description in version info
+  --file-version <ver>  File version (e.g. 1.0.0.0)
+  --product-name <name> Product name in version info
+  --product-version <v> Product version (e.g. 1.0.0.0)
+
+General:
+  -h, --help            Show this help message
+  -v, --version         Show version information
+
+Target Examples:
+  moonc app.moon                      # Full-featured native build
+  moonc app.moon --target=embedded    # Embedded Linux (no GUI)
+  moonc app.moon --target=mcu         # Minimal MCU build
+  moonc app.moon --no-gui --no-network # Custom minimal build
+
+Shared Library Example:
+  moonc mylib.moon --shared -o mylib.dll --header mylib.h
+
+  Use 'export function' in MoonLang to export functions:
+    export function add(a, b):
+        return a + b
+    end
